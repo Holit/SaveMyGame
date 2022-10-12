@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.DirectoryServices.ActiveDirectory;
 using System.Drawing;
 using System.Linq;
+using System.Resources;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,6 +18,9 @@ namespace SaveMyGame
 {
     public partial class MainForm : Form
     {
+        private static readonly ResourceManager mResource
+             = new ResourceManager("SaveMyGame.strings",typeof(MainForm).Assembly);
+           //  = ResourceManager.CreateFileBasedResourceManager("strings", Directory.GetCurrentDirectory(), null);
         struct _config
         {
             public string frompath;
@@ -27,6 +31,12 @@ namespace SaveMyGame
         ParameterizedThreadStart pthsChild;
         Thread thChild;
         static _config config;
+
+        public static string? GetString(string key, System.Windows.Forms.Form? forms = null)
+        {
+            return mResource.GetString(key);
+
+        }
         public MainForm()
         {
             InitializeComponent();
@@ -36,7 +46,8 @@ namespace SaveMyGame
         {
             FolderBrowserDialog dialog = new FolderBrowserDialog();
             //打开的文件夹浏览对话框上的描述  
-            dialog.Description = "Select your game archive directory";
+            
+            dialog.Description = GetString("file_gets_dialog_desc");
             //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
             dialog.ShowNewFolderButton = false;
 
@@ -59,7 +70,7 @@ namespace SaveMyGame
 
             FolderBrowserDialog dialog = new FolderBrowserDialog();
             //打开的文件夹浏览对话框上的描述  
-            dialog.Description = "Select your saving directory";
+            dialog.Description = GetString("file_save_dialog_desc");
             //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
             dialog.ShowNewFolderButton = false;
 
@@ -79,7 +90,9 @@ namespace SaveMyGame
             GetDirSizeByPath(path, ref dirSize);
             if ((dirSize / 1024) / 1024 > 800)
             {
-                MessageBox.Show("Large redundancy directory.\nClean destination folder to save your disk.", "Reminder", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(GetString("reminder_large_dest_dir"),
+                    GetString("msgbox_title_reminder"), 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
 
 
@@ -110,7 +123,7 @@ namespace SaveMyGame
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Cannot get directory size:" + ex.Message);
+                Console.WriteLine(GetString("dir_fail_getsize") + ex.Message);
             }
 
         }
