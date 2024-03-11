@@ -31,7 +31,7 @@
             components = new System.ComponentModel.Container();
             btnSave = new Button();
             label1 = new Label();
-            textBox1 = new TextBox();
+            tbFrom = new TextBox();
             timer1 = new System.Windows.Forms.Timer(components);
             statusStrip1 = new StatusStrip();
             toolStripStatusLabel1 = new ToolStripStatusLabel();
@@ -43,7 +43,7 @@
             folderBrowserDialog1 = new FolderBrowserDialog();
             btn_ToDirSel = new Button();
             label3 = new Label();
-            textBox2 = new TextBox();
+            tbSaveto = new TextBox();
             cbAutoDelete = new CheckBox();
             cbAutoClear = new CheckBox();
             btnManSave = new Button();
@@ -79,14 +79,14 @@
             label1.TabIndex = 14;
             label1.Text = "自";
             // 
-            // textBox1
+            // tbFrom
             // 
-            textBox1.Location = new Point(58, 7);
-            textBox1.Margin = new Padding(4);
-            textBox1.Name = "textBox1";
-            textBox1.ReadOnly = true;
-            textBox1.Size = new Size(552, 38);
-            textBox1.TabIndex = 13;
+            tbFrom.Location = new Point(58, 7);
+            tbFrom.Margin = new Padding(4);
+            tbFrom.Name = "tbFrom";
+            tbFrom.ReadOnly = true;
+            tbFrom.Size = new Size(552, 38);
+            tbFrom.TabIndex = 13;
             // 
             // statusStrip1
             // 
@@ -183,14 +183,14 @@
             label3.TabIndex = 24;
             label3.Text = "到";
             // 
-            // textBox2
+            // tbSaveto
             // 
-            textBox2.Location = new Point(57, 55);
-            textBox2.Margin = new Padding(4);
-            textBox2.Name = "textBox2";
-            textBox2.ReadOnly = true;
-            textBox2.Size = new Size(553, 38);
-            textBox2.TabIndex = 23;
+            tbSaveto.Location = new Point(57, 55);
+            tbSaveto.Margin = new Padding(4);
+            tbSaveto.Name = "tbSaveto";
+            tbSaveto.ReadOnly = true;
+            tbSaveto.Size = new Size(553, 38);
+            tbSaveto.TabIndex = 23;
             // 
             // cbAutoDelete
             // 
@@ -289,7 +289,7 @@
             Controls.Add(cbAutoClear);
             Controls.Add(btnSave);
             Controls.Add(label1);
-            Controls.Add(textBox1);
+            Controls.Add(tbFrom);
             Controls.Add(statusStrip1);
             Controls.Add(btn_FromDirSel);
             Controls.Add(lvDetails);
@@ -298,7 +298,7 @@
             Controls.Add(btnRestore);
             Controls.Add(btn_ToDirSel);
             Controls.Add(label3);
-            Controls.Add(textBox2);
+            Controls.Add(tbSaveto);
             Controls.Add(cbAutoDelete);
             KeyPreview = true;
             Margin = new Padding(4);
@@ -308,6 +308,7 @@
             MinimumSize = new Size(730, 950);
             Name = "MainForm";
             Text = "文件夹存档工具";
+            FormClosing += MainForm_FormClosing;
             Load += MainForm_Load;
             statusStrip1.ResumeLayout(false);
             statusStrip1.PerformLayout();
@@ -320,7 +321,7 @@
 
         private Button btnSave;
         private Label label1;
-        private TextBox textBox1;
+        private TextBox tbFrom;
         private System.Windows.Forms.Timer timer1;
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel toolStripStatusLabel1;
@@ -332,7 +333,7 @@
         private FolderBrowserDialog folderBrowserDialog1;
         private Button btn_ToDirSel;
         private Label label3;
-        private TextBox textBox2;
+        private TextBox tbSaveto;
         private CheckBox cbAutoDelete;
         private CheckBox cbAutoClear;
         private Button btnManSave;
