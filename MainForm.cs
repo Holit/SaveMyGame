@@ -553,7 +553,7 @@ namespace SaveMyGame
             DelegateNotifyByStatusBar delegateNotifyByStatusBar;
             if (thChild != null && started)
             {
-                btnSave.Text = "Save";
+                btnSave.Text = "存档";
                 btnSave.BackColor = Color.Green;
                 started = false;
             }
@@ -567,59 +567,78 @@ namespace SaveMyGame
                 SevenZipCmdHelper zipHelper = new SevenZipCmdHelper(config._7zpath);
                 if (cbAutoClear.Checked)
                 {
-
                     if (System.IO.Directory.Exists(config.topath + "\\" + ".bak"))
                     {
                         DirectoryInfo dirInfo = new DirectoryInfo(config.topath + "\\" + ".bak");
                         long dirSize = 0;
                         GetDirSizeByPath(config.topath + "\\" + ".bak", ref dirSize);
-                        DialogResult dr = MessageBox.Show("Last save backup exists.\nDelete them?\n\n"
+                        DialogResult dr = MessageBox.Show(
+                            "上一个存档(或者是同名称的)文件夹存在\n删除吗?\n\n"
                             + dirInfo.FullName + "\n"
-                            + "Last Write: " + dirInfo.LastWriteTime.ToString("yyyy/MM/dd HH:mm:ss.ffff") + "\n"
-                            + "Size(KB): " + (int)(dirSize / 1024)
-                            , "Existing files.", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                            + "最后修改: " + dirInfo.LastWriteTime.ToString("yyyy/MM/dd HH:mm:ss.ffff") + "\n"
+                            + "大小(KB): " + (int)(dirSize / 1024)
+                            , "文件已存在", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                         if (dr == DialogResult.Yes)
                         {
                             try
                             {
-
                                 System.IO.Directory.Delete(config.topath + "\\" + ".bak", true);
                             }
-                            catch (IOException)
+                            catch (IOException ioex)
                             {
+                                LogToListbox($"删除时遇到IO问题:{ioex.Message}");
                                 //Notify user by status bar
                                 //repeatable structure.
                                 delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
                                 this.BeginInvoke(delegateNotifyByStatusBar,
-                                        new object[] {
-                                name  + " is being used by others."
-                                        });
+                                        new object[] {$"删除时遇到IO问题:{ioex.Message}"});
+                            }
+                            catch (Exception ex) {
+
+                                LogToListbox($"删除时遇到问题:{ex.Message}");
+                                //Notify user by status bar
+                                //repeatable structure.
+                                delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                                this.BeginInvoke(delegateNotifyByStatusBar,
+                                        new object[] { $"删除时遇到问题:{ex.Message}" });
                             }
                         }
                     }
                     System.IO.Directory.CreateDirectory(config.topath + "\\" + ".bak");
                     MoveFiles(config.frompath + "\\", config.topath + "\\" + ".bak");
                 }
-                zipHelper.DecompressFileToDestDirectory(config.topath + "\\" + name, config.frompath);
+                Task task = new Task(() => zipHelper.DecompressFileToDestDirectory(config.topath + "\\" + name, config.frompath));
+                try
+                {
+                    //将进度条设置为Marquee
+                    DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
+                    this.BeginInvoke((SetMarqueeStyle));
 
-                //Notify user by status bar
-                //repeatable structure.
-                delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                this.BeginInvoke(delegateNotifyByStatusBar,
-                        new object[] {
-                                name  + " restored."
-                        });
+                    task.Start();
+                    task.Wait();
+
+                }
+                catch (Exception ex)
+                {
+                    NotifyByStatusBar($"解压缩时出现错误: {ex.Message}");
+                    progOperation.BackColor = Color.Red;
+                }
+                finally
+                {
+                    //通过状态栏通知用户
+                    delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                    this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "解压缩到:" + config.frompath });
+
+                    //将进度条设置为Regular
+                    DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                    this.BeginInvoke((SetRegularStyle));
+                }
             }
             else
             {
-                //Notify user by status bar
-                //repeatable structure.
+                //通过状态栏通知用户
                 delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                this.BeginInvoke(delegateNotifyByStatusBar,
-                        new object[] {
-                        "No save!"
-                        });
-
+                this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "没有存档:" + config.frompath });
             }
         }
         /// <summary>
