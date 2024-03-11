@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace SaveMyGame
 {
-    public class ZipHelper
+    public class SevenZipCmdHelper
     {
         // Fields
         private string _7zInstallPath = @"C:\Program Files\7-Zip\7za.exe";
 
         // Methods
-        public ZipHelper(string str7zInstallPath)
+        public SevenZipCmdHelper(string str7zInstallPath)
         {
             this._7zInstallPath = str7zInstallPath;
         }
@@ -23,11 +23,19 @@ namespace SaveMyGame
         /// </summary>
         /// <param name="strInDirectoryPath">指定需要压缩的目录，如C:\test\，将压缩test目录下的所有文件</param>
         /// <param name="strOutFilePath">压缩后压缩文件的存放目录</param>
-        public void CompressDirectory(string strInDirectoryPath, string strOutFilePath)
+        /// <param name="bFastZip">压缩为仅存储的Zip包</param>
+        public void CompressDirectory(
+            string strInDirectoryPath, 
+            string strOutFilePath, 
+            bool bFastZip = false)
         {
             Process process = new Process();
             process.StartInfo.FileName = this._7zInstallPath;
-            process.StartInfo.Arguments = " a -t7z -mx=9 -ms=64m -m0=LZMA2 " + strOutFilePath + " " + strInDirectoryPath + " -r";
+            process.StartInfo.Arguments = " a -t7z -mx=0 -mmt=16 -r \"" + strOutFilePath + "\" \"" + strInDirectoryPath + "\"";
+            if (!bFastZip)
+            {
+                process.StartInfo.Arguments = " a -t7z -mx=5 -ms=64m -m0=LZMA2 -mmt=16 -r \"" + strOutFilePath + "\" \"" + strInDirectoryPath + "\"";
+            }
             //隐藏DOS窗口
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
@@ -47,7 +55,7 @@ namespace SaveMyGame
         {
             Process process = new Process();
             process.StartInfo.FileName = this._7zInstallPath;
-            process.StartInfo.Arguments = " a -t7z -mx -ms=on -m0=LZMA2 " + strOutFilePath + " " + strInFilePath + "";
+            process.StartInfo.Arguments = " a -t7z -mx -ms=on -m0=LZMA2 \"" + strOutFilePath + "\" \"" + strInFilePath + "\"";
             //隐藏DOS窗口
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
@@ -66,7 +74,7 @@ namespace SaveMyGame
         {
             Process process = new Process();
             process.StartInfo.FileName = this._7zInstallPath;
-            process.StartInfo.Arguments = " x " + strInFilePath + " -o" + strOutDirectoryPath + " -r -aoa";
+            process.StartInfo.Arguments = " x \"" + strInFilePath + "\" -o \"" + strOutDirectoryPath + "\" -r -aoa";
             //隐藏DOS窗口
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;

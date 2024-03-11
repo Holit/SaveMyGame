@@ -28,271 +28,263 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.label1 = new System.Windows.Forms.Label();
-            this.textBox1 = new System.Windows.Forms.TextBox();
-            this.timer1 = new System.Windows.Forms.Timer(this.components);
-            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
-            this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
-            this.btn_FromDirSel = new System.Windows.Forms.Button();
-            this.lvDetails = new System.Windows.Forms.ListView();
-            this.label2 = new System.Windows.Forms.Label();
-            this.nudTime = new System.Windows.Forms.NumericUpDown();
-            this.btnRestore = new System.Windows.Forms.Button();
-            this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
-            this.btn_ToDirSel = new System.Windows.Forms.Button();
-            this.label3 = new System.Windows.Forms.Label();
-            this.textBox2 = new System.Windows.Forms.TextBox();
-            this.cbAutoDelete = new System.Windows.Forms.CheckBox();
-            this.cbAutoClear = new System.Windows.Forms.CheckBox();
-            this.btnStartByProcess = new System.Windows.Forms.Button();
-            this.btnManSave = new System.Windows.Forms.Button();
-            this.cbFast = new System.Windows.Forms.CheckBox();
-            this.statusStrip1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudTime)).BeginInit();
-            this.SuspendLayout();
+            components = new System.ComponentModel.Container();
+            btnSave = new Button();
+            label1 = new Label();
+            textBox1 = new TextBox();
+            timer1 = new System.Windows.Forms.Timer(components);
+            statusStrip1 = new StatusStrip();
+            toolStripStatusLabel1 = new ToolStripStatusLabel();
+            btn_FromDirSel = new Button();
+            lvDetails = new ListView();
+            label2 = new Label();
+            nudTime = new NumericUpDown();
+            btnRestore = new Button();
+            folderBrowserDialog1 = new FolderBrowserDialog();
+            btn_ToDirSel = new Button();
+            label3 = new Label();
+            textBox2 = new TextBox();
+            cbAutoDelete = new CheckBox();
+            cbAutoClear = new CheckBox();
+            btnManSave = new Button();
+            cbFast = new CheckBox();
+            progressBar1 = new ProgressBar();
+            label4 = new Label();
+            statusStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)nudTime).BeginInit();
+            SuspendLayout();
             // 
             // btnSave
             // 
-            this.btnSave.BackColor = System.Drawing.Color.Green;
-            this.btnSave.Location = new System.Drawing.Point(508, 106);
-            this.btnSave.Margin = new System.Windows.Forms.Padding(4);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(192, 75);
-            this.btnSave.TabIndex = 15;
-            this.btnSave.Text = "Save";
-            this.btnSave.UseVisualStyleBackColor = false;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            btnSave.BackColor = Color.Green;
+            btnSave.Location = new Point(508, 106);
+            btnSave.Margin = new Padding(4);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(192, 75);
+            btnSave.TabIndex = 15;
+            btnSave.Text = "Save";
+            btnSave.UseVisualStyleBackColor = false;
+            btnSave.Click += btnSave_Click;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 13);
-            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(73, 31);
-            this.label1.TabIndex = 14;
-            this.label1.Text = "From";
+            label1.AutoSize = true;
+            label1.Location = new Point(12, 13);
+            label1.Margin = new Padding(4, 0, 4, 0);
+            label1.Name = "label1";
+            label1.Size = new Size(73, 31);
+            label1.TabIndex = 14;
+            label1.Text = "From";
             // 
             // textBox1
             // 
-            this.textBox1.Location = new System.Drawing.Point(92, 7);
-            this.textBox1.Margin = new System.Windows.Forms.Padding(4);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.ReadOnly = true;
-            this.textBox1.Size = new System.Drawing.Size(518, 38);
-            this.textBox1.TabIndex = 13;
+            textBox1.Location = new Point(92, 7);
+            textBox1.Margin = new Padding(4);
+            textBox1.Name = "textBox1";
+            textBox1.ReadOnly = true;
+            textBox1.Size = new Size(518, 38);
+            textBox1.TabIndex = 13;
             // 
             // statusStrip1
             // 
-            this.statusStrip1.ImageScalingSize = new System.Drawing.Size(32, 32);
-            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripStatusLabel1});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 838);
-            this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Padding = new System.Windows.Forms.Padding(0, 0, 14, 0);
-            this.statusStrip1.Size = new System.Drawing.Size(704, 41);
-            this.statusStrip1.TabIndex = 20;
-            this.statusStrip1.Text = "statusStrip1";
+            statusStrip1.ImageScalingSize = new Size(32, 32);
+            statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripStatusLabel1 });
+            statusStrip1.Location = new Point(0, 838);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Padding = new Padding(0, 0, 14, 0);
+            statusStrip1.Size = new Size(704, 41);
+            statusStrip1.TabIndex = 20;
+            statusStrip1.Text = "statusStrip1";
             // 
             // toolStripStatusLabel1
             // 
-            this.toolStripStatusLabel1.Name = "toolStripStatusLabel1";
-            this.toolStripStatusLabel1.Size = new System.Drawing.Size(85, 31);
-            this.toolStripStatusLabel1.Text = "Ready";
+            toolStripStatusLabel1.Name = "toolStripStatusLabel1";
+            toolStripStatusLabel1.Size = new Size(85, 31);
+            toolStripStatusLabel1.Text = "Ready";
             // 
             // btn_FromDirSel
             // 
-            this.btn_FromDirSel.Location = new System.Drawing.Point(616, 2);
-            this.btn_FromDirSel.Margin = new System.Windows.Forms.Padding(4);
-            this.btn_FromDirSel.Name = "btn_FromDirSel";
-            this.btn_FromDirSel.Size = new System.Drawing.Size(86, 47);
-            this.btn_FromDirSel.TabIndex = 19;
-            this.btn_FromDirSel.Text = "...";
-            this.btn_FromDirSel.UseVisualStyleBackColor = true;
-            this.btn_FromDirSel.Click += new System.EventHandler(this.btn_FromDirSel_Click);
+            btn_FromDirSel.Location = new Point(616, 2);
+            btn_FromDirSel.Margin = new Padding(4);
+            btn_FromDirSel.Name = "btn_FromDirSel";
+            btn_FromDirSel.Size = new Size(86, 47);
+            btn_FromDirSel.TabIndex = 19;
+            btn_FromDirSel.Text = "...";
+            btn_FromDirSel.UseVisualStyleBackColor = true;
+            btn_FromDirSel.Click += btn_FromDirSel_Click;
             // 
             // lvDetails
             // 
-            this.lvDetails.FullRowSelect = true;
-            this.lvDetails.GridLines = true;
-            this.lvDetails.Location = new System.Drawing.Point(12, 186);
-            this.lvDetails.Margin = new System.Windows.Forms.Padding(4);
-            this.lvDetails.MultiSelect = false;
-            this.lvDetails.Name = "lvDetails";
-            this.lvDetails.Size = new System.Drawing.Size(688, 567);
-            this.lvDetails.TabIndex = 18;
-            this.lvDetails.UseCompatibleStateImageBehavior = false;
-            this.lvDetails.View = System.Windows.Forms.View.Details;
+            lvDetails.FullRowSelect = true;
+            lvDetails.GridLines = true;
+            lvDetails.Location = new Point(12, 241);
+            lvDetails.Margin = new Padding(4);
+            lvDetails.MultiSelect = false;
+            lvDetails.Name = "lvDetails";
+            lvDetails.Size = new Size(688, 512);
+            lvDetails.TabIndex = 18;
+            lvDetails.UseCompatibleStateImageBehavior = false;
+            lvDetails.View = View.Details;
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(15, 106);
-            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(97, 31);
-            this.label2.TabIndex = 17;
-            this.label2.Text = "Time(s)";
+            label2.AutoSize = true;
+            label2.Location = new Point(12, 105);
+            label2.Margin = new Padding(4, 0, 4, 0);
+            label2.Name = "label2";
+            label2.Size = new Size(97, 31);
+            label2.TabIndex = 17;
+            label2.Text = "Time(s)";
             // 
             // nudTime
             // 
-            this.nudTime.Location = new System.Drawing.Point(119, 103);
-            this.nudTime.Margin = new System.Windows.Forms.Padding(4);
-            this.nudTime.Maximum = new decimal(new int[] {
-            3600,
-            0,
-            0,
-            0});
-            this.nudTime.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.nudTime.MinimumSize = new System.Drawing.Size(116, 0);
-            this.nudTime.Name = "nudTime";
-            this.nudTime.Size = new System.Drawing.Size(116, 38);
-            this.nudTime.TabIndex = 16;
-            this.nudTime.Value = new decimal(new int[] {
-            60,
-            0,
-            0,
-            0});
+            nudTime.Location = new Point(119, 103);
+            nudTime.Margin = new Padding(4);
+            nudTime.Maximum = new decimal(new int[] { 3600, 0, 0, 0 });
+            nudTime.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            nudTime.MinimumSize = new Size(116, 0);
+            nudTime.Name = "nudTime";
+            nudTime.Size = new Size(126, 38);
+            nudTime.TabIndex = 16;
+            nudTime.Value = new decimal(new int[] { 60, 0, 0, 0 });
             // 
             // btnRestore
             // 
-            this.btnRestore.Location = new System.Drawing.Point(508, 759);
-            this.btnRestore.Margin = new System.Windows.Forms.Padding(4);
-            this.btnRestore.Name = "btnRestore";
-            this.btnRestore.Size = new System.Drawing.Size(192, 69);
-            this.btnRestore.TabIndex = 21;
-            this.btnRestore.Text = "Restore";
-            this.btnRestore.UseVisualStyleBackColor = true;
-            this.btnRestore.Click += new System.EventHandler(this.btnRestore_Click);
+            btnRestore.Location = new Point(465, 759);
+            btnRestore.Margin = new Padding(4);
+            btnRestore.Name = "btnRestore";
+            btnRestore.Size = new Size(235, 69);
+            btnRestore.TabIndex = 21;
+            btnRestore.Text = "Restore";
+            btnRestore.UseVisualStyleBackColor = true;
+            btnRestore.Click += btnRestore_Click;
             // 
             // btn_ToDirSel
             // 
-            this.btn_ToDirSel.Location = new System.Drawing.Point(616, 57);
-            this.btn_ToDirSel.Margin = new System.Windows.Forms.Padding(4);
-            this.btn_ToDirSel.Name = "btn_ToDirSel";
-            this.btn_ToDirSel.Size = new System.Drawing.Size(86, 47);
-            this.btn_ToDirSel.TabIndex = 25;
-            this.btn_ToDirSel.Text = "...";
-            this.btn_ToDirSel.UseVisualStyleBackColor = true;
-            this.btn_ToDirSel.Click += new System.EventHandler(this.btn_ToDirSel_Click);
+            btn_ToDirSel.Location = new Point(616, 57);
+            btn_ToDirSel.Margin = new Padding(4);
+            btn_ToDirSel.Name = "btn_ToDirSel";
+            btn_ToDirSel.Size = new Size(86, 47);
+            btn_ToDirSel.TabIndex = 25;
+            btn_ToDirSel.Text = "...";
+            btn_ToDirSel.UseVisualStyleBackColor = true;
+            btn_ToDirSel.Click += btn_ToDirSel_Click;
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(13, 58);
-            this.label3.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(99, 31);
-            this.label3.TabIndex = 24;
-            this.label3.Text = "Save to";
+            label3.AutoSize = true;
+            label3.Location = new Point(12, 59);
+            label3.Margin = new Padding(4, 0, 4, 0);
+            label3.Name = "label3";
+            label3.Size = new Size(99, 31);
+            label3.TabIndex = 24;
+            label3.Text = "Save to";
             // 
             // textBox2
             // 
-            this.textBox2.Location = new System.Drawing.Point(119, 55);
-            this.textBox2.Margin = new System.Windows.Forms.Padding(4);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.ReadOnly = true;
-            this.textBox2.Size = new System.Drawing.Size(491, 38);
-            this.textBox2.TabIndex = 23;
+            textBox2.Location = new Point(119, 55);
+            textBox2.Margin = new Padding(4);
+            textBox2.Name = "textBox2";
+            textBox2.ReadOnly = true;
+            textBox2.Size = new Size(491, 38);
+            textBox2.TabIndex = 23;
             // 
             // cbAutoDelete
             // 
-            this.cbAutoDelete.AutoSize = true;
-            this.cbAutoDelete.Location = new System.Drawing.Point(12, 759);
-            this.cbAutoDelete.Margin = new System.Windows.Forms.Padding(4);
-            this.cbAutoDelete.Name = "cbAutoDelete";
-            this.cbAutoDelete.Size = new System.Drawing.Size(233, 35);
-            this.cbAutoDelete.TabIndex = 22;
-            this.cbAutoDelete.Text = "Delete old items";
-            this.cbAutoDelete.UseVisualStyleBackColor = true;
+            cbAutoDelete.AutoSize = true;
+            cbAutoDelete.Location = new Point(12, 759);
+            cbAutoDelete.Margin = new Padding(4);
+            cbAutoDelete.Name = "cbAutoDelete";
+            cbAutoDelete.Size = new Size(233, 35);
+            cbAutoDelete.TabIndex = 22;
+            cbAutoDelete.Text = "Delete old items";
+            cbAutoDelete.UseVisualStyleBackColor = true;
             // 
             // cbAutoClear
             // 
-            this.cbAutoClear.AutoSize = true;
-            this.cbAutoClear.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.cbAutoClear.Location = new System.Drawing.Point(12, 797);
-            this.cbAutoClear.Margin = new System.Windows.Forms.Padding(4);
-            this.cbAutoClear.Name = "cbAutoClear";
-            this.cbAutoClear.Size = new System.Drawing.Size(367, 35);
-            this.cbAutoClear.TabIndex = 26;
-            this.cbAutoClear.Text = "Clear folder before restore";
-            this.cbAutoClear.UseVisualStyleBackColor = true;
-            // 
-            // btnStartByProcess
-            // 
-            this.btnStartByProcess.Enabled = false;
-            this.btnStartByProcess.Location = new System.Drawing.Point(400, 759);
-            this.btnStartByProcess.Margin = new System.Windows.Forms.Padding(4);
-            this.btnStartByProcess.Name = "btnStartByProcess";
-            this.btnStartByProcess.Size = new System.Drawing.Size(102, 69);
-            this.btnStartByProcess.TabIndex = 27;
-            this.btnStartByProcess.Text = "Trace";
-            this.btnStartByProcess.UseVisualStyleBackColor = true;
-            this.btnStartByProcess.Click += new System.EventHandler(this.btnStartByProcess_Click);
+            cbAutoClear.AutoSize = true;
+            cbAutoClear.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+            cbAutoClear.Location = new Point(12, 797);
+            cbAutoClear.Margin = new Padding(4);
+            cbAutoClear.Name = "cbAutoClear";
+            cbAutoClear.Size = new Size(367, 35);
+            cbAutoClear.TabIndex = 26;
+            cbAutoClear.Text = "Clear folder before restore";
+            cbAutoClear.UseVisualStyleBackColor = true;
             // 
             // btnManSave
             // 
-            this.btnManSave.Location = new System.Drawing.Point(312, 102);
-            this.btnManSave.Margin = new System.Windows.Forms.Padding(4);
-            this.btnManSave.Name = "btnManSave";
-            this.btnManSave.Size = new System.Drawing.Size(192, 75);
-            this.btnManSave.TabIndex = 28;
-            this.btnManSave.Text = "Manully save";
-            this.btnManSave.UseVisualStyleBackColor = true;
-            this.btnManSave.Click += new System.EventHandler(this.btnManSave_Click);
+            btnManSave.Location = new Point(312, 106);
+            btnManSave.Margin = new Padding(4);
+            btnManSave.Name = "btnManSave";
+            btnManSave.Size = new Size(192, 75);
+            btnManSave.TabIndex = 28;
+            btnManSave.Text = "Manully save";
+            btnManSave.UseVisualStyleBackColor = true;
+            btnManSave.Click += btnManSave_Click;
             // 
             // cbFast
             // 
-            this.cbFast.AutoSize = true;
-            this.cbFast.Location = new System.Drawing.Point(12, 146);
-            this.cbFast.Name = "cbFast";
-            this.cbFast.Size = new System.Drawing.Size(165, 35);
-            this.cbFast.TabIndex = 29;
-            this.cbFast.Text = "Fast mode";
-            this.cbFast.UseVisualStyleBackColor = true;
+            cbFast.AutoSize = true;
+            cbFast.Location = new Point(12, 146);
+            cbFast.Name = "cbFast";
+            cbFast.Size = new Size(165, 35);
+            cbFast.TabIndex = 29;
+            cbFast.Text = "Fast mode";
+            cbFast.UseVisualStyleBackColor = true;
+            // 
+            // progressBar1
+            // 
+            progressBar1.Location = new Point(131, 188);
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(566, 46);
+            progressBar1.TabIndex = 30;
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Location = new Point(12, 194);
+            label4.Name = "label4";
+            label4.Size = new Size(113, 31);
+            label4.TabIndex = 31;
+            label4.Text = "Progress";
             // 
             // MainForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(14F, 31F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(704, 879);
-            this.Controls.Add(this.cbFast);
-            this.Controls.Add(this.btnManSave);
-            this.Controls.Add(this.btnStartByProcess);
-            this.Controls.Add(this.cbAutoClear);
-            this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.textBox1);
-            this.Controls.Add(this.statusStrip1);
-            this.Controls.Add(this.btn_FromDirSel);
-            this.Controls.Add(this.lvDetails);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.nudTime);
-            this.Controls.Add(this.btnRestore);
-            this.Controls.Add(this.btn_ToDirSel);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.textBox2);
-            this.Controls.Add(this.cbAutoDelete);
-            this.Margin = new System.Windows.Forms.Padding(4);
-            this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(730, 950);
-            this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(730, 950);
-            this.Name = "MainForm";
-            this.Text = "Directory Auto Saver";
-            this.Load += new System.EventHandler(this.MainForm_Load);
-            this.statusStrip1.ResumeLayout(false);
-            this.statusStrip1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudTime)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleDimensions = new SizeF(14F, 31F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(704, 879);
+            Controls.Add(label4);
+            Controls.Add(progressBar1);
+            Controls.Add(cbFast);
+            Controls.Add(btnManSave);
+            Controls.Add(cbAutoClear);
+            Controls.Add(btnSave);
+            Controls.Add(label1);
+            Controls.Add(textBox1);
+            Controls.Add(statusStrip1);
+            Controls.Add(btn_FromDirSel);
+            Controls.Add(lvDetails);
+            Controls.Add(label2);
+            Controls.Add(nudTime);
+            Controls.Add(btnRestore);
+            Controls.Add(btn_ToDirSel);
+            Controls.Add(label3);
+            Controls.Add(textBox2);
+            Controls.Add(cbAutoDelete);
+            Margin = new Padding(4);
+            MaximizeBox = false;
+            MaximumSize = new Size(730, 950);
+            MinimizeBox = false;
+            MinimumSize = new Size(730, 950);
+            Name = "MainForm";
+            Text = "Directory Auto Saver";
+            Load += MainForm_Load;
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)nudTime).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -314,8 +306,9 @@
         private TextBox textBox2;
         private CheckBox cbAutoDelete;
         private CheckBox cbAutoClear;
-        private Button btnStartByProcess;
         private Button btnManSave;
         private CheckBox cbFast;
+        private ProgressBar progressBar1;
+        private Label label4;
     }
 }

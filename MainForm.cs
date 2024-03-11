@@ -6,6 +6,7 @@ using System.Data;
 using System.Diagnostics;
 using System.DirectoryServices.ActiveDirectory;
 using System.Drawing;
+using System.IO.Compression;
 using System.Linq;
 using System.Resources;
 using System.Security.Cryptography.X509Certificates;
@@ -13,7 +14,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
-
 namespace SaveMyGame
 {
     public partial class MainForm : Form
@@ -24,71 +24,47 @@ namespace SaveMyGame
             public string topath;
             public string _7zpath;
             public int interval;
+            public bool isFastMode;
         }
         ParameterizedThreadStart pthsChild;
         Thread thChild;
         static _config config;
 
-        public MainForm()
+
+        /// <summary>
+        ///  //跨盘移动
+        /// </summary>
+        /// <param name="sourcePath">源文件路径</param>
+        /// <param name="destPath">新文件路径</param>
+        /// <returns></returns>
+        void Move(string sourcePath, string destPath)//文件移动函数
         {
-            InitializeComponent();
-        }
-
-        private void btn_FromDirSel_Click(object sender, EventArgs e)
-        {
-            FolderBrowserDialog dialog = new FolderBrowserDialog();
-            //打开的文件夹浏览对话框上的描述  
-
-            dialog.Description = "Select your game archive directory";
-            //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
-            dialog.ShowNewFolderButton = false;
-
-            string path = textBox1.Text;
-            dialog.SelectedPath = path;
-            //按下确定选择的按钮  
-            if (dialog.ShowDialog() == DialogResult.OK)
+            DirectoryInfo dir = new DirectoryInfo(sourcePath);
+            if (Directory.Exists(sourcePath))
             {
-                //记录选中的目录  
-                path = dialog.SelectedPath;
-                if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+                destPath = destPath + "\\" + dir.Name;
+                Directory.CreateDirectory(destPath);
+            }
+            DirectoryInfo[] directoryInfos = dir.GetDirectories();
+            if (directoryInfos != null)
+            {
+                for (int i = 0; i < directoryInfos.Length; i++)
                 {
-                    textBox1.Text = path;
+                    Move(directoryInfos[i].FullName, destPath);
                 }
             }
-        }
-
-        private void btn_ToDirSel_Click(object sender, EventArgs e)
-        {
-
-            FolderBrowserDialog dialog = new FolderBrowserDialog();
-            //打开的文件夹浏览对话框上的描述  
-            dialog.Description = "Select your saving directory";
-            //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
-            dialog.ShowNewFolderButton = false;
-
-            string path = textBox2.Text;
-            dialog.SelectedPath = path;
-            //按下确定选择的按钮  
-            if (dialog.ShowDialog() == DialogResult.OK)
+            FileInfo[] fileInfos = dir.GetFiles();
+            if (fileInfos != null)
             {
-                //记录选中的目录  
-                path = dialog.SelectedPath;
-                if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+                for (int i = 0; i < fileInfos.Length; i++)
                 {
-                    textBox2.Text = path;
+                    fileInfos[i].MoveTo(destPath + "\\" + fileInfos[i].Name);
                 }
             }
-            long dirSize = 0;
-            GetDirSizeByPath(path, ref dirSize);
-            if ((dirSize / 1024) / 1024 > 800)
-            {
-                MessageBox.Show("Large redundancy directory.\nClean destination folder to save your disk.",
-                    "Reminder", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-
-
+            Directory.Delete(sourcePath);
         }
+
+
         /// <summary>
         /// 获取某一文件夹的大小
         /// </summary>
@@ -119,20 +95,84 @@ namespace SaveMyGame
             }
 
         }
+        public MainForm()
+        {
+            InitializeComponent();
+        }
         private void MainForm_Load(object sender, EventArgs e)
         {
             lvDetails.Columns.Add("Name", (int)(0.3 * lvDetails.Size.Width));
 
             lvDetails.Columns.Add("Date", (int)(0.5 * lvDetails.Size.Width));
             lvDetails.Columns.Add("Size", (int)(0.2 * lvDetails.Size.Width));
+
             textBox2.Text = Application.StartupPath;
             config._7zpath = Application.StartupPath + "7z.exe";
+
         }
+        private void btn_FromDirSel_Click(object sender, EventArgs e)
+        {
+            FolderBrowserDialog dialog = new FolderBrowserDialog();
+            //打开的文件夹浏览对话框上的描述  
+
+            dialog.Description = "Select your game archive directory";
+            //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
+            dialog.ShowNewFolderButton = false;
+
+            string path = textBox1.Text;
+            dialog.SelectedPath = path;
+            //按下确定选择的按钮  
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                //记录选中的目录  
+                path = dialog.SelectedPath;
+                if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+                {
+                    textBox1.Text = path;
+                    Debug.WriteLine("Game archive: " + path);
+                }
+            }
+        }
+
+        private void btn_ToDirSel_Click(object sender, EventArgs e)
+        {
+
+            FolderBrowserDialog dialog = new FolderBrowserDialog();
+            //打开的文件夹浏览对话框上的描述  
+            dialog.Description = "Select your saving directory";
+            //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
+            dialog.ShowNewFolderButton = false;
+
+            string path = textBox2.Text;
+            dialog.SelectedPath = path;
+            //按下确定选择的按钮  
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                //记录选中的目录  
+                path = dialog.SelectedPath;
+                if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+                {
+                    textBox2.Text = path;
+                }
+            }
+            long dirSize = 0;
+            GetDirSizeByPath(path, ref dirSize);
+            //如果目标文件夹大小大于800M
+            if ((dirSize / 1024) / 1024 > 800)
+            {
+                MessageBox.Show("Large redundancy directory.\nClean destination folder to save your disk.",
+                    "Reminder", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+
+        }
+
         public void ArchiveCallTo(object para)
         {
             _config config = (_config)para;
 
-            ZipHelper zipHelper = new ZipHelper(config._7zpath);
+            SevenZipCmdHelper _7zHelper = new SevenZipCmdHelper(config._7zpath);
             System.Timers.Timer timer = new System.Timers.Timer()
             {
                 Interval = config.interval * 1000,
@@ -156,7 +196,8 @@ namespace SaveMyGame
                     DateTime dt = DateTime.Now;
                     string name = dt.ToString("yy-MM-dd-hh-mm-ss-ffff") + ".7z";
                     string savepath = config.topath + "\\" + name;
-                    zipHelper.CompressDirectory(config.frompath + "/*.*", savepath);
+                    Debug.WriteLine("7z attempt to compress path " + config.frompath + "/*.*");
+                    _7zHelper.CompressDirectory(config.frompath + "/*.*", savepath);
                     X509Certificate cert =  X509Certificate.CreateFromSignedFile(savepath);
 
                     //Notify user by status bar
@@ -208,6 +249,7 @@ namespace SaveMyGame
                 return;
             }
         }
+
         System.Timers.Timer tmStatusBar;
         delegate void DelegateNotifyByStatusBar(string info);
         public void NotifyByStatusBar(string info)
@@ -298,38 +340,7 @@ namespace SaveMyGame
                 started = false;
             }
         }
-        /// <summary>
-        ///  //跨盘移动
-        /// </summary>
-        /// <param name="sourcePath">源文件路径</param>
-        /// <param name="destPath">新文件路径</param>
-        /// <returns></returns>
-        void Move(string sourcePath, string destPath)//文件移动函数
-        {
-            DirectoryInfo dir = new DirectoryInfo(sourcePath);
-            if (Directory.Exists(sourcePath))
-            {
-                destPath = destPath + "\\" + dir.Name;
-                Directory.CreateDirectory(destPath);
-            }
-            DirectoryInfo[] directoryInfos = dir.GetDirectories();
-            if (directoryInfos != null)
-            {
-                for (int i = 0; i < directoryInfos.Length; i++)
-                {
-                    Move(directoryInfos[i].FullName, destPath);
-                }
-            }
-            FileInfo[] fileInfos = dir.GetFiles();
-            if (fileInfos != null)
-            {
-                for (int i = 0; i < fileInfos.Length; i++)
-                {
-                    fileInfos[i].MoveTo(destPath + "\\" + fileInfos[i].Name);
-                }
-            }
-            Directory.Delete(sourcePath);
-        }
+
         private void btnRestore_Click(object sender, EventArgs e)
         {
             DelegateNotifyByStatusBar delegateNotifyByStatusBar;
@@ -346,7 +357,7 @@ namespace SaveMyGame
                     lvDetails.Items[lvDetails.Items.Count - 1].Selected = true;
                 }
                 string name = lvDetails.SelectedItems[0].SubItems[0].Text;
-                ZipHelper zipHelper = new ZipHelper(config._7zpath);
+                SevenZipCmdHelper zipHelper = new SevenZipCmdHelper(config._7zpath);
                 if (cbAutoClear.Checked)
                 {
 
@@ -404,63 +415,53 @@ namespace SaveMyGame
 
             }
         }
-
-        struct _proc_monitor_config
+        private void CompressDirectory(string sourceDirectory, string zipFilePath, IProgress<int> progress)
         {
-            public string ExecutablePath;
-            public long Pid;
-            public bool isRunning;
-        }
-        _proc_monitor_config proc_Monitor_Config;
-        public void MonitorProcessStartCallTo(object para)
-        {
-            _proc_monitor_config monitor_config = (_proc_monitor_config)(para);
-            do
+            // Ensure the source directory exists
+            if (!Directory.Exists(sourceDirectory))
             {
-                if (System.Diagnostics.Process.GetProcessesByName(monitor_config.ExecutablePath).Length > 0)
-                {
-                    proc_Monitor_Config.Pid = System.Diagnostics.
-                        Process.GetProcessesByName(monitor_config.ExecutablePath)[0].Id;
-                    proc_Monitor_Config.isRunning = true;
-                }
-
-            } while (isStartMonitorProcess);
-            return;
-        }
-        private bool isStartMonitorProcess = false;
-        private void btnStartByProcess_Click(object sender, EventArgs e)
-        {
-            SelectProcess frmSelectProcess = new SelectProcess();
-            if (frmSelectProcess.ShowDialog() == DialogResult.OK)
-            {
-                string? process = frmSelectProcess.SelectedProcessExecutable;
-                if (process != null)
-                {
-                    ParameterizedThreadStart pthsMonitorProcess = new ParameterizedThreadStart(MonitorProcessStartCallTo);
-                    Thread thsMonitorProcess = new Thread(pthsChild);
-                    thsMonitorProcess.IsBackground = true;
-                    isStartMonitorProcess = true;
-                    proc_Monitor_Config.ExecutablePath = process;
-                    proc_Monitor_Config.Pid = 0;
-                    thsMonitorProcess.Start();
-                }
+                throw new DirectoryNotFoundException($"Source directory '{sourceDirectory}' not found.");
             }
 
+            // Create a new ZIP archive
+            using (FileStream zipToCreate = new FileStream(zipFilePath, FileMode.Create))
+            {
+                using (ZipArchive archive = new ZipArchive(zipToCreate, ZipArchiveMode.Create))
+                {
+                    string[] files = Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories);
+                    int totalFiles = files.Length;
+                    int filesProcessed = 0;
+
+                    foreach (string file in files)
+                    {
+                        string relativePath = file.Substring(sourceDirectory.Length + 1);
+                        ZipArchiveEntry entry = archive.CreateEntryFromFile(file, relativePath);
+
+                        // Report progress
+                        filesProcessed++;
+                        int percentComplete = (int)((float)filesProcessed / totalFiles * 100);
+                        progress.Report(percentComplete);
+                    }
+                }
+            }
         }
+
         public bool ManuallySaved = false;
         private void btnManSave_Click(object sender, EventArgs e)
         {
+            
             config.frompath = textBox1.Text;
             config.topath = textBox2.Text;
             config._7zpath = Application.StartupPath + "7z.exe";
             config.interval = (int)nudTime.Value;
+            config.isFastMode = cbFast.Checked;
 
             if (!System.IO.Directory.Exists(config.frompath)
                 || !System.IO.Directory.Exists(config.topath))
             {
                 return;
             }
-            ZipHelper zipHelper = new ZipHelper(config._7zpath);
+            SevenZipCmdHelper _7zHelper = new SevenZipCmdHelper(config._7zpath);
 
             /*
              * System.Timers.Timer will create another thread.
@@ -473,9 +474,12 @@ namespace SaveMyGame
                     if (!ManuallySaved)
                     {
                         DateTime dt = DateTime.Now;
-                        string name = dt.ToString("yy-MM-dd-hh-mm-ss-ffff") + ".7z";
+                        string name = dt.ToString("yyMMddhhmmssffffff") + ".7z";
                         string savepath = config.topath + "\\" + name;
-                        zipHelper.CompressDirectory(config.frompath + "/*.*", savepath);
+                        _7zHelper.CompressDirectory(
+                            config.frompath + "/*.*",
+                            savepath,
+                            config.isFastMode);
 
                         //Notify user by status bar
                         //repeatable structure.
