@@ -6,19 +6,28 @@ using System.Threading.Tasks;
 
 namespace SaveMyGame
 {
-    public struct config
+    /// <summary>
+    /// 应用程序配置
+    /// </summary>
+    public struct applicationConfig
     {
         public string?   frompath;
         public string?   topath;
         public string?   _7zpath;
         public int      interval;
+
         public bool     isFastMode;
-        public bool     bUsing7Z;
+        public bool     isUsing7Z;
         public bool     isRemindedSize;
+        public bool     isDeleteOldFiles;
+        public bool     isClearBeforeRestore;
     }
+    /// <summary>
+    /// 文件结构
+    /// </summary>
     public struct archiveRecord
     {
-        public string? name;
+        public string? filePath;
         public string? restorePath;
         public DateTime date;
         public long size;

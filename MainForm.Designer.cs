@@ -44,8 +44,8 @@
             btn_ToDirSel = new Button();
             label3 = new Label();
             tbSaveto = new TextBox();
-            cbAutoDelete = new CheckBox();
-            cbAutoClear = new CheckBox();
+            cbDeleteOldFiles = new CheckBox();
+            cbClearBeforeRestore = new CheckBox();
             btnManSave = new Button();
             cbFast = new CheckBox();
             progOperation = new ProgressBar();
@@ -159,6 +159,7 @@
             btnRestore.Size = new Size(192, 69);
             btnRestore.TabIndex = 21;
             btnRestore.Text = "恢复";
+            toolTip1.SetToolTip(btnRestore, "如果未选中，则默认恢复最近的存档");
             btnRestore.UseVisualStyleBackColor = true;
             btnRestore.Click += btnRestore_Click;
             // 
@@ -192,28 +193,31 @@
             tbSaveto.Size = new Size(553, 38);
             tbSaveto.TabIndex = 23;
             // 
-            // cbAutoDelete
+            // cbDeleteOldFiles
             // 
-            cbAutoDelete.AutoSize = true;
-            cbAutoDelete.Location = new Point(12, 759);
-            cbAutoDelete.Margin = new Padding(4);
-            cbAutoDelete.Name = "cbAutoDelete";
-            cbAutoDelete.Size = new Size(238, 35);
-            cbAutoDelete.TabIndex = 22;
-            cbAutoDelete.Text = "保存时删除旧项目";
-            cbAutoDelete.UseVisualStyleBackColor = true;
+            cbDeleteOldFiles.AutoSize = true;
+            cbDeleteOldFiles.Location = new Point(12, 759);
+            cbDeleteOldFiles.Margin = new Padding(4);
+            cbDeleteOldFiles.Name = "cbDeleteOldFiles";
+            cbDeleteOldFiles.Size = new Size(238, 35);
+            cbDeleteOldFiles.TabIndex = 22;
+            cbDeleteOldFiles.Text = "保存时删除旧项目";
+            toolTip1.SetToolTip(cbDeleteOldFiles, "保存新存档时自动删除旧存档，目标文件夹内按照所有文件计算，不超过10个文件。");
+            cbDeleteOldFiles.UseVisualStyleBackColor = true;
+            cbDeleteOldFiles.CheckedChanged += cbDeleteOldFiles_CheckedChanged;
             // 
-            // cbAutoClear
+            // cbClearBeforeRestore
             // 
-            cbAutoClear.AutoSize = true;
-            cbAutoClear.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
-            cbAutoClear.Location = new Point(12, 797);
-            cbAutoClear.Margin = new Padding(4);
-            cbAutoClear.Name = "cbAutoClear";
-            cbAutoClear.Size = new Size(286, 35);
-            cbAutoClear.TabIndex = 26;
-            cbAutoClear.Text = "恢复时清空目标文件夹";
-            cbAutoClear.UseVisualStyleBackColor = true;
+            cbClearBeforeRestore.AutoSize = true;
+            cbClearBeforeRestore.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+            cbClearBeforeRestore.Location = new Point(12, 797);
+            cbClearBeforeRestore.Margin = new Padding(4);
+            cbClearBeforeRestore.Name = "cbClearBeforeRestore";
+            cbClearBeforeRestore.Size = new Size(286, 35);
+            cbClearBeforeRestore.TabIndex = 26;
+            cbClearBeforeRestore.Text = "恢复时清空目标文件夹";
+            cbClearBeforeRestore.UseVisualStyleBackColor = true;
+            cbClearBeforeRestore.CheckedChanged += cbClearBeforeRestore_CheckedChanged;
             // 
             // btnManSave
             // 
@@ -234,8 +238,9 @@
             cbFast.Size = new Size(118, 35);
             cbFast.TabIndex = 29;
             cbFast.Text = "仅存储";
-            toolTip1.SetToolTip(cbFast, "Create archive and do not compress");
+            toolTip1.SetToolTip(cbFast, "使用仅存储策略压缩，减少压缩、解压缩时间");
             cbFast.UseVisualStyleBackColor = true;
+            cbFast.CheckedChanged += cbFast_CheckedChanged;
             // 
             // progOperation
             // 
@@ -272,8 +277,9 @@
             cbUsing7z.Size = new Size(72, 35);
             cbUsing7z.TabIndex = 33;
             cbUsing7z.Text = "7z";
-            toolTip1.SetToolTip(cbUsing7z, "Higher compression ratio, longer time");
+            toolTip1.SetToolTip(cbUsing7z, "利用7z压缩器完成压缩操作， 这需要7z文件支持");
             cbUsing7z.UseVisualStyleBackColor = true;
+            cbUsing7z.CheckedChanged += cbUsing7z_CheckedChanged;
             // 
             // MainForm
             // 
@@ -286,7 +292,7 @@
             Controls.Add(progOperation);
             Controls.Add(cbFast);
             Controls.Add(btnManSave);
-            Controls.Add(cbAutoClear);
+            Controls.Add(cbClearBeforeRestore);
             Controls.Add(btnSave);
             Controls.Add(label1);
             Controls.Add(tbFrom);
@@ -299,7 +305,7 @@
             Controls.Add(btn_ToDirSel);
             Controls.Add(label3);
             Controls.Add(tbSaveto);
-            Controls.Add(cbAutoDelete);
+            Controls.Add(cbDeleteOldFiles);
             KeyPreview = true;
             Margin = new Padding(4);
             MaximizeBox = false;
@@ -334,8 +340,8 @@
         private Button btn_ToDirSel;
         private Label label3;
         private TextBox tbSaveto;
-        private CheckBox cbAutoDelete;
-        private CheckBox cbAutoClear;
+        private CheckBox cbDeleteOldFiles;
+        private CheckBox cbClearBeforeRestore;
         private Button btnManSave;
         private CheckBox cbFast;
         private ProgressBar progOperation;

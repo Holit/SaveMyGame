@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Data;
+using System.Data.Entity;
 using System.Data.Entity.Core.Common.CommandTrees;
 using System.Diagnostics;
 using System.DirectoryServices.ActiveDirectory;
@@ -21,11 +22,17 @@ namespace SaveMyGame
 {
     public partial class MainForm : Form
     {
+        //创建计时器线程
         ParameterizedThreadStart pthsChild;
         Thread thChild;
-        static config runtimeConfig;
+
+        static applicationConfig runtimeConfig;
+        
         DatabaseHelper dbHelper;
 
+        /// <summary>
+        /// 从数据库恢复配置
+        /// </summary>
         void ReadConfig()
         {
             runtimeConfig = dbHelper.LoadConfig();
@@ -36,13 +43,21 @@ namespace SaveMyGame
             if (runtimeConfig.interval <= 0) runtimeConfig.interval = 60;
             nudTime.Value = runtimeConfig.interval;
             cbFast.Checked = runtimeConfig.isFastMode;
-            cbUsing7z.Checked = runtimeConfig.bUsing7Z;
+            cbUsing7z.Checked = runtimeConfig.isUsing7Z;
+            cbDeleteOldFiles.Checked = runtimeConfig.isDeleteOldFiles;
+            cbClearBeforeRestore.Checked = runtimeConfig.isClearBeforeRestore;
         }
-
-        void SaveConfig(config _config)
+        /// <summary>
+        /// 将指定配置写入数据库
+        /// </summary>
+        /// <param name="_config"></param>
+        void SaveConfig(applicationConfig _config)
         {
             dbHelper.SaveConfig(_config);
         }
+        /// <summary>
+        /// 将运行时配置写入数据库
+        /// </summary>
         void SaveConfig()
         {
             //更新配置
@@ -50,10 +65,11 @@ namespace SaveMyGame
             runtimeConfig.topath = tbSaveto.Text;
             runtimeConfig.interval = (int)nudTime.Value;
             runtimeConfig.isFastMode = cbFast.Checked;
-            runtimeConfig.bUsing7Z = cbUsing7z.Checked;
+            runtimeConfig.isUsing7Z = cbUsing7z.Checked;
+            runtimeConfig.isDeleteOldFiles = cbDeleteOldFiles.Checked;
+            runtimeConfig.isClearBeforeRestore = cbClearBeforeRestore.Checked;
 
             SaveConfig(runtimeConfig);
-            dbHelper.SaveConfig(runtimeConfig);
         }
         /// <summary>
         ///  //跨盘移动
@@ -129,11 +145,12 @@ namespace SaveMyGame
             ReadConfig();
             //初始化表头
             lvDetails.Columns.Add("名称", (int)(0.3 * lvDetails.Size.Width));
-
             lvDetails.Columns.Add("日期", (int)(0.5 * lvDetails.Size.Width));
             lvDetails.Columns.Add("未压缩大小", (int)(0.2 * lvDetails.Size.Width));
 
             tbSaveto.Text = Application.StartupPath;
+
+            //查找7z文件
             if (string.IsNullOrEmpty(runtimeConfig._7zpath))
             {
                 if (File.Exists(Application.StartupPath + "7z.exe"))
@@ -153,11 +170,14 @@ namespace SaveMyGame
                     runtimeConfig._7zpath = "";
                 }
             }
-            if(runtimeConfig._7zpath =="")
+            if (runtimeConfig._7zpath == "")
             {
                 cbUsing7z.Enabled = false;
                 LogToListbox("7z文件未找到：请将7z.exe放在应用程序同层的文件夹下；已禁用7z操作。");
             }
+
+            //根据数据库更新ListView
+            UpdatelvDetail();
 
         }
         private void btn_FromDirSel_Click(object sender, EventArgs e)
@@ -226,7 +246,7 @@ namespace SaveMyGame
         public void ArchiveCallee(object para)
         {
             //线程参数不能访问主程序的config，此结构通过para传递。
-            config runtimeConfigTh = (config)para;
+            applicationConfig runtimeConfigTh = (applicationConfig)para;
 
             //确定7z文件路径，实例化助手类
             SevenZipCmdHelper _7zHelper = new SevenZipCmdHelper(runtimeConfigTh._7zpath);
@@ -240,11 +260,11 @@ namespace SaveMyGame
 
             try
             {
-                if (runtimeConfigTh.bUsing7Z)
+                if (runtimeConfigTh.isUsing7Z)
                 {
                     timer.Elapsed += (state, e) =>
                     {
-                        if (!started)
+                        if (!isTimerStarted)
                         {
                             timer.Stop();
                             timer.Dispose();
@@ -269,7 +289,25 @@ namespace SaveMyGame
 
                         Debug.WriteLine("7z attempt to compress path " + runtimeConfigTh.frompath + "/*.*");
 
-                        Task task = new Task(() => _7zHelper.CompressDirectory(runtimeConfigTh.frompath + "/*.*", savepath, runtimeConfigTh.isFastMode));
+                        Task task = new Task(() =>
+                        {
+                            _7zHelper.CompressDirectory(runtimeConfigTh.frompath + "/*.*", savepath, runtimeConfigTh.isFastMode);
+                            //通过状态栏通知用户
+                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+
+                            //确定文件夹大小
+                            string[] files = Directory.GetFiles(runtimeConfigTh.frompath, "*", SearchOption.AllDirectories);
+                            long totalSize = CalculateDirectorySize(files);
+
+                            //更新记录
+                            DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
+                            this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
+
+                            //将进度条设置为Regular
+                            DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                            this.BeginInvoke((SetRegularStyle));
+                        });
                         try
                         {
                             //将进度条设置为Marquee
@@ -285,24 +323,6 @@ namespace SaveMyGame
                             NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
                             progOperation.BackColor = Color.Red;
                         }
-                        finally
-                        {
-                            //通过状态栏通知用户
-                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
-
-                            //确定文件夹大小
-                            string[] files = Directory.GetFiles(runtimeConfigTh.frompath, "*", SearchOption.AllDirectories);
-                            long totalSize = CalculateDirectorySize(files);
-
-                            //向ListView中添加详细记录
-                            DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
-                            this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
-
-                            //将进度条设置为Regular
-                            DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                            this.BeginInvoke((SetRegularStyle));
-                        }
                     };
                 }
                 else
@@ -313,12 +333,12 @@ namespace SaveMyGame
                         DateTime dt = DateTime.Now;
                         string filename = dt.ToString("yyMMddhhmmssffffff");
 
-                        if (runtimeConfigTh.bUsing7Z) { filename += ".7z"; }
+                        if (runtimeConfigTh.isUsing7Z) { filename += ".7z"; }
                         else { filename += ".zip"; }
 
                         string savepath = runtimeConfigTh.topath + "\\" + filename;
 
-                        string sourceDirectory = runtimeConfigTh.frompath;
+                        string? sourceDirectory = runtimeConfigTh.frompath;
                         string zipFilePath = savepath;
 
                         progOperation.Minimum = 0;
@@ -327,7 +347,21 @@ namespace SaveMyGame
 
                         progOperation.BackColor = Color.Green;
 
-                        Task task = new Task(() => CompressDirectory(sourceDirectory, zipFilePath, true));
+                        Task task = new Task(() =>
+                        {
+                            CompressDirectory(sourceDirectory, zipFilePath, true);
+                            //通过状态栏通知用户
+                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { savepath + " saved." });
+
+                            //确定文件夹大小
+                            string[] files = Directory.GetFiles(runtimeConfigTh.frompath, "*", SearchOption.AllDirectories);
+                            long totalSize = CalculateDirectorySize(files);
+
+                            //更新记录
+                            DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
+                            this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
+                        });
                         try
                         {
                             task.Start();
@@ -337,20 +371,6 @@ namespace SaveMyGame
                             NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
                             progOperation.BackColor = Color.Red;
                             //progOperation.Value = 100;
-                        }
-                        finally
-                        {
-                            //通过状态栏通知用户
-                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { savepath + " saved." });
-
-                            //确定文件夹大小
-                            string[] files = Directory.GetFiles(runtimeConfigTh.frompath, "*", SearchOption.AllDirectories);
-                            long totalSize = CalculateDirectorySize(files);
-
-                            //向ListView中添加详细记录
-                            DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
-                            this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
                         }
                     };
                 }
@@ -491,41 +511,80 @@ namespace SaveMyGame
             }
         }
 
-        delegate void DelegateModifylvDetail(string name, DateTime date, long size);
+        /// <summary>
+        /// 自动清理旧文件
+        /// </summary>
+        public void DeleteOldFiles()
+        {
+            int delete_max = 10;
+            if (runtimeConfig.isDeleteOldFiles)
+            {
+                IEnumerable<string> filesInFolder = Directory.EnumerateFiles(runtimeConfig.topath);
+                List<archiveRecord> fileRecords = dbHelper.ReadAllFileRecord();
 
+                // 筛选出文件夹中存在记录的文件
+                List<string> existingFilesInFolder = filesInFolder.Where(filePath => fileRecords.Any(record => record.filePath == filePath)).ToList();
+
+                if (lvDetails.Items.Count >= delete_max)
+                {
+                    List<string> filesToDelete = existingFilesInFolder.OrderBy(filePath => File.GetCreationTime(filePath)).ToList();
+                    int filesToDeleteCount = existingFilesInFolder.Count - delete_max;
+                    for (int i = 0; i < filesToDeleteCount; i++)
+                    {
+                        string filePathToDelete = filesToDelete[i];
+                        DeleteRecord(filePathToDelete, new FileInfo(filePathToDelete).Length);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 删除记录，同时删除记录对应的文件
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="size"></param>
+        public void DeleteRecord(string filePath, long size)
+        {
+            //删除文件
+            if (File.Exists(filePath))
+            {
+                if (new FileInfo(filePath).Length == size)
+                {
+                    // TODO:
+                    // 增加回收而不是删除功能
+                    new FileInfo(filePath).Delete();
+                }
+            }
+            //删除数据库
+            int dbRes = dbHelper.DeleteFileRecord(filePath, size);
+            if (dbRes != 1)
+            {
+                LogToListbox($"记录{filePath}与数据库中的数据不匹配，数据库中发现了{dbRes}条数据", true);
+            }
+        }
+        delegate void DelegateInsertRecord(string filePath, DateTime date, long size);
+        public void InsertRecord(string filePath, DateTime date, long size)
+        {
+            //自动限制长度增长，根据配置文件
+            DeleteOldFiles();
+            //同步数据库和ListView
+            UpdatelvDetail();
+            dbHelper.InsertFileRecord(filePath, date, runtimeConfig.frompath, size);
+            //向ListView中添加详细记录
+            DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
+            this.BeginInvoke(delegateModifylvDetail, new object[] { filePath, date, size });
+        }
+        delegate void DelegateModifylvDetail(string name, DateTime date, long size);
         /// <summary>
         /// 向详细信息ListView中增加记录
         /// </summary>
-        /// <param name="name"></param>
+        /// <param name="filePath"></param>
         /// <param name="date"></param>
         /// <param name="size"></param>
-        public void ModifylvDetail(string name, DateTime date, long size)
+        public void ModifylvDetail(string filePath, DateTime date, long size)
         {
-            int delete_max = 2;
-            if (cbAutoDelete.Checked)
-            {
-                if (lvDetails.Items.Count >= delete_max)
-                {
-                    if (System.IO.File.Exists(runtimeConfig.topath + "\\" + lvDetails.Items[0].SubItems[0].Text))
-                    {
-                        System.IO.File.Delete(runtimeConfig.topath + "\\" + lvDetails.Items[0].SubItems[0].Text);
-                    }
-                    else
-                    {
-                        //Notify user by status bar
-                        //repeatable structure.
-                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                        this.BeginInvoke(delegateNotifyByStatusBar,
-                                new object[] {
-                                lvDetails.Items[0].SubItems[0].Text + "not found!"
-                                });
-                    }
-                    lvDetails.Items.Remove(lvDetails.Items[0]);
-                    lvDetails.Refresh();
-                }
-            }
             ListViewItem lvitem = new ListViewItem();
-            lvitem.Text = name;
+            lvitem.Text = Path.GetFileName(filePath);
             lvitem.SubItems.Add(date.ToString("yyyy/MM/dd HH:mm:ss.ffff"));
 
             string strSize = "";
@@ -556,8 +615,28 @@ namespace SaveMyGame
             lvDetails.Items[lvDetails.Items.Count - 1].Selected = true;
             lvDetails.Items[lvDetails.Items.Count - 1].EnsureVisible();
         }
-
-        private bool started = false;
+        public void UpdatelvDetail()
+        {
+            VerifydbPath();
+            lvDetails.Items.Clear();
+            List<archiveRecord> fileRecords = dbHelper.ReadAllFileRecord();
+            foreach (var fileRecord in fileRecords)
+            {
+                ModifylvDetail(fileRecord.filePath, fileRecord.date, fileRecord.size);
+            }
+        }
+        public void VerifydbPath()
+        {
+            List<archiveRecord> fileRecords = dbHelper.ReadAllFileRecord();
+            foreach (var fileRecord in fileRecords)
+            {
+                if (!File.Exists(fileRecord.filePath))
+                {
+                    dbHelper.DeleteFileRecord(fileRecord.filePath, fileRecord.size);
+                }
+            }
+        }
+        private bool isTimerStarted = false;
         private void btnSave_Click(object sender, EventArgs e)
         {
             //更新并保存配置
@@ -567,14 +646,14 @@ namespace SaveMyGame
             thChild = new Thread(pthsChild);
             thChild.IsBackground = true;
 
-            if (!started)
+            if (!isTimerStarted)
             {
                 if (tbFrom.Text != "" && tbSaveto.Text != "")
                 {
                     thChild.Start(runtimeConfig);
                     LogToListbox($"线程 {thChild.ManagedThreadId} 启动");
 
-                    started = true;
+                    isTimerStarted = true;
                     btnSave.Text = "终止";
                     btnSave.BackColor = Color.Red;
                 }
@@ -585,76 +664,101 @@ namespace SaveMyGame
                 //using bool to notify a loop thread.
                 btnSave.Text = "存档";
                 btnSave.BackColor = Color.Green;
-                started = false;
+                isTimerStarted = false;
             }
         }
 
         private void btnRestore_Click(object sender, EventArgs e)
         {
-            if(runtimeConfig._7zpath == "")
+            //检查7z路径
+            //无效操作
+            if (runtimeConfig._7zpath == "")
             {
-                MessageBox.Show("由于7z文件缺失，暂时无法完成解压缩操作。","错误",MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("由于7z文件缺失，暂时无法完成解压缩操作。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            DelegateNotifyByStatusBar delegateNotifyByStatusBar;
-            if (thChild != null && started)
+            //按下恢复后，终止计时器
+            if (thChild != null && isTimerStarted)
             {
                 btnSave.Text = "存档";
                 btnSave.BackColor = Color.Green;
-                started = false;
+                isTimerStarted = false;
             }
+
+            DelegateNotifyByStatusBar delegateNotifyByStatusBar;
+            //确定文件列表中存在文件
             if (lvDetails.Items.Count > 0)
             {
+                //如果未选中，默认恢复最近的一个
                 if (lvDetails.SelectedItems.Count == 0)
                 {
                     lvDetails.Items[lvDetails.Items.Count - 1].Selected = true;
                 }
-                string name = lvDetails.SelectedItems[0].SubItems[0].Text;
-                SevenZipCmdHelper zipHelper = new SevenZipCmdHelper(runtimeConfig._7zpath);
-                if (cbAutoClear.Checked)
-                {
-                    if (System.IO.Directory.Exists(runtimeConfig.topath + "\\" + ".bak"))
-                    {
-                        DirectoryInfo dirInfo = new DirectoryInfo(runtimeConfig.topath + "\\" + ".bak");
-                        long dirSize = 0;
-                        GetDirSizeByPath(runtimeConfig.topath + "\\" + ".bak", ref dirSize);
-                        DialogResult dr = MessageBox.Show(
-                            "上一个存档(或者是同名称的)文件夹存在\n删除吗?\n\n"
-                            + dirInfo.FullName + "\n"
-                            + "最后修改: " + dirInfo.LastWriteTime.ToString("yyyy/MM/dd HH:mm:ss.ffff") + "\n"
-                            + "大小(KB): " + (int)(dirSize / 1024)
-                            , "文件已存在", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                        if (dr == DialogResult.Yes)
-                        {
-                            try
-                            {
-                                System.IO.Directory.Delete(runtimeConfig.topath + "\\" + ".bak", true);
-                            }
-                            catch (IOException ioex)
-                            {
-                                LogToListbox($"删除时遇到IO问题:{ioex.Message}");
-                                //Notify user by status bar
-                                //repeatable structure.
-                                delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                                this.BeginInvoke(delegateNotifyByStatusBar,
-                                        new object[] { $"删除时遇到IO问题:{ioex.Message}" });
-                            }
-                            catch (Exception ex)
-                            {
 
-                                LogToListbox($"删除时遇到问题:{ex.Message}");
-                                //Notify user by status bar
-                                //repeatable structure.
-                                delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                                this.BeginInvoke(delegateNotifyByStatusBar,
-                                        new object[] { $"删除时遇到问题:{ex.Message}" });
-                            }
+                string name = lvDetails.SelectedItems[0].SubItems[0].Text;
+                archiveRecord zipToRestore = dbHelper.ReadFileRecordByName(name);
+
+                SevenZipCmdHelper zipHelper = new SevenZipCmdHelper(runtimeConfig._7zpath);
+
+                //如果指定了恢复前清空目标文件夹
+                Task taskRecyle = new Task(() => { });
+                if (runtimeConfig.isClearBeforeRestore)
+                {
+                    taskRecyle = new Task(() =>
+                    {
+                        if(Directory.Exists(runtimeConfig.frompath))
+                        {
+                            Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
+                                                        runtimeConfig.frompath + "\\",
+                                                        Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                                                        Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+
+                            //通过状态栏通知用户
+                            delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { $"文件夹 {runtimeConfig.frompath} 已移动到回收站" });
+                        }
+
+                        //将进度条设置为Regular
+                        DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                        this.BeginInvoke((SetRegularStyle));
+                    });
+
+                    try
+                    {
+                        //将进度条设置为Marquee
+                        DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
+                        this.BeginInvoke((SetMarqueeStyle));
+
+                        taskRecyle.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        NotifyByStatusBar($"回收文件夹时出现错误: {ex.Message}");
+                        progOperation.BackColor = Color.Red;
+                    }
+
+                }
+                Task task = new Task(() =>
+                {
+                    taskRecyle.Wait();
+                    string? restorePath = zipToRestore.restorePath;
+                    if (!Directory.Exists(restorePath))
+                    {
+                        if(!string.IsNullOrEmpty(restorePath))
+                        {
+                            Directory.CreateDirectory(restorePath);
                         }
                     }
-                    System.IO.Directory.CreateDirectory(runtimeConfig.topath + "\\" + ".bak");
-                    MoveFiles(runtimeConfig.frompath + "\\", runtimeConfig.topath + "\\" + ".bak");
-                }
-                Task task = new Task(() => zipHelper.DecompressFileToDestDirectory(runtimeConfig.topath + "\\" + name, runtimeConfig.frompath));
+                    zipHelper.DecompressFileToDestDirectory(zipToRestore.filePath, restorePath);
+
+                    //通过状态栏通知用户
+                    delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                    this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "解压缩到:" + restorePath });
+
+                    //将进度条设置为Regular
+                    DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                    this.BeginInvoke((SetRegularStyle));
+                });
                 try
                 {
                     //将进度条设置为Marquee
@@ -662,23 +766,11 @@ namespace SaveMyGame
                     this.BeginInvoke((SetMarqueeStyle));
 
                     task.Start();
-                    task.Wait();
-
                 }
                 catch (Exception ex)
                 {
                     NotifyByStatusBar($"解压缩时出现错误: {ex.Message}");
                     progOperation.BackColor = Color.Red;
-                }
-                finally
-                {
-                    //通过状态栏通知用户
-                    delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                    this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "解压缩到:" + runtimeConfig.frompath });
-
-                    //将进度条设置为Regular
-                    DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                    this.BeginInvoke((SetRegularStyle));
                 }
             }
             else
@@ -722,7 +814,7 @@ namespace SaveMyGame
         /// </summary>
         /// <param name="sourceDirectory"></param>
         /// <param name="zipFilePath"></param>
-        private void CompressDirectory(string sourceDirectory, string zipFilePath, bool replace = false)
+        private void CompressDirectory(string? sourceDirectory, string zipFilePath, bool replace = false)
         {
             if (!System.IO.Directory.Exists(sourceDirectory)) throw new FileNotFoundException($"Source directory {sourceDirectory} is not found.");
             if (System.IO.File.Exists(zipFilePath) && !replace) throw new IOException($"文件 {zipFilePath} 已存在");
@@ -792,12 +884,15 @@ namespace SaveMyGame
             DateTime dt = DateTime.Now;
             string filename = dt.ToString("yyMMddhhmmssffffff");
 
-            if (runtimeConfig.bUsing7Z) { filename += ".7z"; }
+            if (runtimeConfig.isUsing7Z) { filename += ".7z"; }
             else { filename += ".zip"; }
 
             string savepath = runtimeConfig.topath + "\\" + filename;
 
-            if (runtimeConfig.bUsing7Z)
+            // 禁用手动保存按钮
+            btnManSave.Enabled = false;
+
+            if (runtimeConfig.isUsing7Z)
             {
                 SevenZipCmdHelper _7zHelper = new SevenZipCmdHelper(runtimeConfig._7zpath);
                 try
@@ -808,7 +903,27 @@ namespace SaveMyGame
 
                         Debug.WriteLine("7z attempt to compress path " + runtimeConfig.frompath + "/*.*");
 
-                        Task task = new Task(() => _7zHelper.CompressDirectory(runtimeConfig.frompath + "/*.*", savepath, runtimeConfig.isFastMode));
+                        Task task = new Task(() =>
+                        {
+                            _7zHelper.CompressDirectory(runtimeConfig.frompath + "/*.*", savepath, runtimeConfig.isFastMode);
+
+                            //通过状态栏通知用户
+                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+
+                            //确定文件夹大小
+                            string[] files = Directory.GetFiles(runtimeConfig.frompath, "*", SearchOption.AllDirectories);
+                            long totalSize = CalculateDirectorySize(files);
+
+
+                            //更新记录
+                            DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
+                            this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
+
+                            //将进度条设置为Regular
+                            DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                            this.BeginInvoke((SetRegularStyle));
+                        });
                         try
                         {
                             //将进度条设置为Marquee
@@ -816,7 +931,6 @@ namespace SaveMyGame
                             this.BeginInvoke((SetMarqueeStyle));
 
                             task.Start();
-                            task.Wait();
 
                         }
                         catch (Exception ex)
@@ -826,21 +940,6 @@ namespace SaveMyGame
                         }
                         finally
                         {
-                            //通过状态栏通知用户
-                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
-
-                            //确定文件夹大小
-                            string[] files = Directory.GetFiles(runtimeConfig.frompath, "*", SearchOption.AllDirectories);
-                            long totalSize = CalculateDirectorySize(files);
-
-                            //向ListView中添加详细记录
-                            DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
-                            this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
-
-                            //将进度条设置为Regular
-                            DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                            this.BeginInvoke((SetRegularStyle));
                         }
                     });
                     task.Start();
@@ -858,8 +957,6 @@ namespace SaveMyGame
                 string sourceDirectory = runtimeConfig.frompath;
                 string zipFilePath = savepath;
 
-                // Disable compress button during compression
-                btnManSave.Enabled = false;
 
                 // Initialize progress bar
                 progOperation.Minimum = 0;
@@ -871,6 +968,18 @@ namespace SaveMyGame
                 Task task = new Task(() =>
                     {
                         CompressDirectory(sourceDirectory, zipFilePath, true);
+
+                        //通过状态栏通知用户
+                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                        this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+
+                        //确定文件夹大小
+                        string[] files = Directory.GetFiles(runtimeConfig.frompath, "*", SearchOption.AllDirectories);
+                        long totalSize = CalculateDirectorySize(files);
+
+                        //更新记录
+                        DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
+                        this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
                     }
                 );
                 try
@@ -883,28 +992,35 @@ namespace SaveMyGame
                     progOperation.BackColor = Color.Red;
                     progOperation.Value = 100;
                 }
-                finally
-                {
-                    btnManSave.Enabled = true;
-                    //通过状态栏通知用户
-                    DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                    this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
-
-                    //确定文件夹大小
-                    string[] files = Directory.GetFiles(runtimeConfig.frompath, "*", SearchOption.AllDirectories);
-                    long totalSize = CalculateDirectorySize(files);
-
-                    //向ListView中添加详细记录
-                    DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
-                    this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
-                }
                 return;
             }
+
+            btnManSave.Enabled = true;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveConfig();
+        }
+
+        private void cbFast_CheckedChanged(object sender, EventArgs e)
+        {
+            runtimeConfig.isFastMode = cbFast.Checked;
+        }
+
+        private void cbUsing7z_CheckedChanged(object sender, EventArgs e)
+        {
+            runtimeConfig.isUsing7Z = cbUsing7z.Checked;
+        }
+
+        private void cbDeleteOldFiles_CheckedChanged(object sender, EventArgs e)
+        {
+            runtimeConfig.isDeleteOldFiles = cbDeleteOldFiles.Checked;
+        }
+
+        private void cbClearBeforeRestore_CheckedChanged(object sender, EventArgs e)
+        {
+            runtimeConfig.isClearBeforeRestore = cbClearBeforeRestore.Checked;
         }
     }
 }

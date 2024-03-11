@@ -10,12 +10,37 @@ namespace SaveMyGame
     public class SevenZipCmdHelper
     {
         // Fields
-        private string _7zInstallPath = @"C:\Program Files\7-Zip\7za.exe";
-
-        // Methods
-        public SevenZipCmdHelper(string str7zInstallPath)
+        private string? _7zInstallPath = @"C:\Program Files\7-Zip\7za.exe";
+        
+        /// <summary>
+        /// 指定7z支持文件，如果不指定，将从几个可能的位置查找
+        /// </summary>
+        /// <param name="str7zInstallPath"></param>
+        public SevenZipCmdHelper(string? str7zInstallPath)
         {
-            this._7zInstallPath = str7zInstallPath;
+            if (string.IsNullOrWhiteSpace(str7zInstallPath))
+            {
+                if (File.Exists(Application.StartupPath + "7z.exe"))
+                {
+                    _7zInstallPath = Application.StartupPath + "7z.exe";
+                }
+                else if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles) + "\\7-Zip\\7z.exe"))
+                {
+                    _7zInstallPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles) + "\\7-Zip\\7z.exe";
+                }
+                else if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFilesX86) + "\\7-Zip\\7z.exe"))
+                {
+                    _7zInstallPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFilesX86) + "\\7-Zip\\7z.exe";
+                }
+                else
+                {
+                    _7zInstallPath = "";
+                }
+            }
+            else
+            {
+                this._7zInstallPath = str7zInstallPath;
+            }
         }
 
         /// <summary>
@@ -25,8 +50,8 @@ namespace SaveMyGame
         /// <param name="strOutFilePath">压缩后压缩文件的存放目录</param>
         /// <param name="bFastZip">压缩为仅存储的Zip包</param>
         public void CompressDirectory(
-            string strInDirectoryPath, 
-            string strOutFilePath, 
+            string strInDirectoryPath,
+            string strOutFilePath,
             bool bFastZip = false)
         {
             Process process = new Process();
@@ -39,7 +64,7 @@ namespace SaveMyGame
             //隐藏DOS窗口
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
-            
+
             process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             process.Start();
             process.WaitForExit();
@@ -51,8 +76,17 @@ namespace SaveMyGame
         /// </summary>
         /// <param name="strInFilePath">指定需要压缩的文件，如C:\test\demo.xlsx，将压缩demo.xlsx文件</param>
         /// <param name="strOutFilePath">压缩后压缩文件的存放目录</param>
-        public void CompressFile(string strInFilePath, string strOutFilePath)
+        public void CompressFile(string? strInFilePath, string? strOutFilePath)
         {
+            if (string.IsNullOrWhiteSpace(strInFilePath)
+                || !File.Exists(strInFilePath))
+            {
+                throw new FileNotFoundException($"File {strInFilePath} not found");
+            }
+            if (string.IsNullOrWhiteSpace(strOutFilePath))
+            {
+                throw new ArgumentNullException(nameof(strOutFilePath));
+            }
             Process process = new Process();
             process.StartInfo.FileName = this._7zInstallPath;
             process.StartInfo.Arguments = " a -t7z -mx -ms=on -m0=LZMA2 \"" + strOutFilePath + "\" \"" + strInFilePath + "\"";
@@ -70,11 +104,20 @@ namespace SaveMyGame
         /// </summary>
         /// <param name="strInFilePath">压缩文件的路径</param>
         /// <param name="strOutDirectoryPath">解压缩后文件的路径</param>
-        public void DecompressFileToDestDirectory(string strInFilePath, string strOutDirectoryPath)
+        public void DecompressFileToDestDirectory(string? strInFilePath, string? strOutDirectoryPath)
         {
+            if (string.IsNullOrWhiteSpace(strInFilePath)
+                || !File.Exists(strInFilePath))
+            {
+                throw new FileNotFoundException($"File {strInFilePath} not found");
+            }
+            if (string.IsNullOrWhiteSpace(strOutDirectoryPath))
+            {
+                throw new ArgumentNullException(nameof(strOutDirectoryPath));
+            }
             Process process = new Process();
             process.StartInfo.FileName = this._7zInstallPath;
-            process.StartInfo.Arguments = " x \"" + strInFilePath + "\" -o \"" + strOutDirectoryPath + "\" -r -aoa";
+            process.StartInfo.Arguments = " x \"" + strInFilePath + "\" -o\"" + strOutDirectoryPath + "\" -r -aoa";
             //隐藏DOS窗口
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
