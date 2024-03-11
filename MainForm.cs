@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 namespace SaveMyGame
 {
     public partial class MainForm : Form
@@ -25,11 +26,12 @@ namespace SaveMyGame
             public string _7zpath;
             public int interval;
             public bool isFastMode;
+            public bool bUsing7Z;
+            public bool isRemindedSize;
         }
         ParameterizedThreadStart pthsChild;
         Thread thChild;
         static _config config;
-
 
         /// <summary>
         ///  //跨盘移动
@@ -37,7 +39,7 @@ namespace SaveMyGame
         /// <param name="sourcePath">源文件路径</param>
         /// <param name="destPath">新文件路径</param>
         /// <returns></returns>
-        void Move(string sourcePath, string destPath)//文件移动函数
+        void MoveFiles(string sourcePath, string destPath)//文件移动函数
         {
             DirectoryInfo dir = new DirectoryInfo(sourcePath);
             if (Directory.Exists(sourcePath))
@@ -50,7 +52,7 @@ namespace SaveMyGame
             {
                 for (int i = 0; i < directoryInfos.Length; i++)
                 {
-                    Move(directoryInfos[i].FullName, destPath);
+                    MoveFiles(directoryInfos[i].FullName, destPath);
                 }
             }
             FileInfo[] fileInfos = dir.GetFiles();
@@ -91,7 +93,7 @@ namespace SaveMyGame
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Cannot get directory size:" + ex.Message);
+                Console.WriteLine("获取文件夹大小失败:" + ex.Message);
             }
 
         }
@@ -101,10 +103,11 @@ namespace SaveMyGame
         }
         private void MainForm_Load(object sender, EventArgs e)
         {
-            lvDetails.Columns.Add("Name", (int)(0.3 * lvDetails.Size.Width));
+            //初始化表头
+            lvDetails.Columns.Add("名称", (int)(0.3 * lvDetails.Size.Width));
 
-            lvDetails.Columns.Add("Date", (int)(0.5 * lvDetails.Size.Width));
-            lvDetails.Columns.Add("Size", (int)(0.2 * lvDetails.Size.Width));
+            lvDetails.Columns.Add("日期", (int)(0.5 * lvDetails.Size.Width));
+            lvDetails.Columns.Add("未压缩大小", (int)(0.2 * lvDetails.Size.Width));
 
             textBox2.Text = Application.StartupPath;
             config._7zpath = Application.StartupPath + "7z.exe";
@@ -115,7 +118,7 @@ namespace SaveMyGame
             FolderBrowserDialog dialog = new FolderBrowserDialog();
             //打开的文件夹浏览对话框上的描述  
 
-            dialog.Description = "Select your game archive directory";
+            dialog.Description = "选择要存档的文件夹";
             //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
             dialog.ShowNewFolderButton = false;
 
@@ -139,7 +142,7 @@ namespace SaveMyGame
 
             FolderBrowserDialog dialog = new FolderBrowserDialog();
             //打开的文件夹浏览对话框上的描述  
-            dialog.Description = "Select your saving directory";
+            dialog.Description = "存储到...";
             //是否显示对话框左下角 新建文件夹 按钮，默认为 true  
             dialog.ShowNewFolderButton = false;
 
@@ -156,126 +159,300 @@ namespace SaveMyGame
                 }
             }
             long dirSize = 0;
-            GetDirSizeByPath(path, ref dirSize);
-            //如果目标文件夹大小大于800M
-            if ((dirSize / 1024) / 1024 > 800)
+            if (!config.isRemindedSize)
             {
-                MessageBox.Show("Large redundancy directory.\nClean destination folder to save your disk.",
-                    "Reminder", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                GetDirSizeByPath(path, ref dirSize);
+                //如果目标文件夹大小大于800M
+                if ((dirSize / 1024) / 1024 > 800)
+                {
+                    MessageBox.Show("目标文件夹内容较多\n清除目标文件夹以节省计算机空间。",
+                        "提醒",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                }
+                config.isRemindedSize = true;
             }
 
 
         }
 
-        public void ArchiveCallTo(object para)
+        public void ArchiveCallee(object para)
         {
+            //线程参数不能访问主程序的config，此结构通过para传递。
             _config config = (_config)para;
 
+            //确定7z文件路径，实例化助手类
             SevenZipCmdHelper _7zHelper = new SevenZipCmdHelper(config._7zpath);
+
+            //通过定时器，定时触发。
             System.Timers.Timer timer = new System.Timers.Timer()
             {
                 Interval = config.interval * 1000,
                 Enabled = false
             };
-            /*
-             * System.Timers.Timer will create another thread.
-             * This is a monitor thread for timer manage and stop.
-             */
+
             try
             {
-                timer.Elapsed += (state, e) =>
+                if (config.bUsing7Z)
                 {
-                    if (!started)
+                    timer.Elapsed += (state, e) =>
                     {
-                        timer.Stop();
-                        timer.Dispose();
+                        if (!started)
+                        {
+                            timer.Stop();
+                            timer.Dispose();
 
-                        return;
-                    }
-                    DateTime dt = DateTime.Now;
-                    string name = dt.ToString("yy-MM-dd-hh-mm-ss-ffff") + ".7z";
-                    string savepath = config.topath + "\\" + name;
-                    Debug.WriteLine("7z attempt to compress path " + config.frompath + "/*.*");
-                    _7zHelper.CompressDirectory(config.frompath + "/*.*", savepath);
-                    X509Certificate cert =  X509Certificate.CreateFromSignedFile(savepath);
-
-                    //Notify user by status bar
-                    //repeatable structure.
-                    DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                    this.BeginInvoke(delegateNotifyByStatusBar,
-                            new object[] {
-                                savepath  + " saved."
-                            });
-                    DelegateModifylvDetail de = new DelegateModifylvDetail(ModifylvDetail);
-                    string strSize = "";
-                    long size = new System.IO.FileInfo(savepath).Length;
-                    if (size <= 1024)
-                    {
-                        strSize = size.ToString() + "B";
-                    }
-                    else if ((int)(size / 1024) <= 1024)
-                    {
-                        strSize = (size / 1024.00).ToString("f2") + "KB";
-                    }
-                    else if ((int)((size / 1024) / 1024) <= 1024)
-                    {
-                        strSize = (size / 1024.00 / 1024.00).ToString("f2") + "MB";
-                    }
-                    else
-                    {
-                        strSize = "LARGE:" + size.ToString() + "B";
-                    }
-                    this.BeginInvoke(de,
-                        new object[] {
-                        name,
-                        dt,
-                        strSize
+                            return;
                         }
-                    );
-                    Debug.WriteLine("this.BeginInvoke");
-                };
+                        //确定文件夹存在且合法
+                        if (!System.IO.Directory.Exists(config.frompath))
+                        {
+                            LogToListbox($"{config.frompath}不存在", true);
+                            return;
+                        }
+                        //确定文件名
+                        DateTime dt = DateTime.Now;
+                        string filename = dt.ToString("yyMMddhhmmssffffff");
+
+                        filename += ".7z";
+
+                        string savepath = config.topath + "\\" + filename;
+
+                        //本应该检测文件是否存在，但是由于使用时间戳的6位毫秒形式保存文件，则不太可能存在一样的文件。
+
+                        Debug.WriteLine("7z attempt to compress path " + config.frompath + "/*.*");
+
+                        Task task = new Task(() => _7zHelper.CompressDirectory(config.frompath + "/*.*", savepath, config.isFastMode));
+                        try
+                        {
+                            //将进度条设置为Marquee
+                            DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
+                            this.BeginInvoke((SetMarqueeStyle));
+
+                            task.Start();
+                            task.Wait();
+
+                        }
+                        catch (Exception ex)
+                        {
+                            NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
+                            progOperation.BackColor = Color.Red;
+                        }
+                        finally
+                        {
+                            //通过状态栏通知用户
+                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+
+                            //确定文件夹大小
+                            string[] files = Directory.GetFiles(config.frompath, "*", SearchOption.AllDirectories);
+                            long totalSize = CalculateDirectorySize(files);
+
+                            //向ListView中添加详细记录
+                            DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
+                            this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
+
+                            //将进度条设置为Regular
+                            DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                            this.BeginInvoke((SetRegularStyle));
+                        }
+                    };
+                }
+                else
+                {
+                    timer.Elapsed += (state, e) =>
+                    {
+                        //确定文件名
+                        DateTime dt = DateTime.Now;
+                        string filename = dt.ToString("yyMMddhhmmssffffff");
+
+                        if (config.bUsing7Z) { filename += ".7z"; }
+                        else { filename += ".zip"; }
+
+                        string savepath = config.topath + "\\" + filename;
+
+                        string sourceDirectory = config.frompath;
+                        string zipFilePath = savepath;
+
+                        progOperation.Minimum = 0;
+                        progOperation.Maximum = 100;
+                        progOperation.Value = 0;
+
+                        progOperation.BackColor = Color.Green;
+
+                        Task task = new Task(() => CompressDirectory(sourceDirectory, zipFilePath, true));
+                        try
+                        {
+                            task.Start();
+                        }
+                        catch (Exception ex)
+                        {
+                            NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
+                            progOperation.BackColor = Color.Red;
+                            //progOperation.Value = 100;
+                        }
+                        finally
+                        {
+                            //通过状态栏通知用户
+                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { savepath + " saved." });
+
+                            //确定文件夹大小
+                            string[] files = Directory.GetFiles(config.frompath, "*", SearchOption.AllDirectories);
+                            long totalSize = CalculateDirectorySize(files);
+
+                            //向ListView中添加详细记录
+                            DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
+                            this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
+                        }
+                    };
+                }
+
                 timer.Start();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Exception@thread: " + ex.Message);
+                LogToListbox($"线程出现故障:{ex.Message}",true);
                 if (timer.Enabled)
                 {
                     timer.Stop();
                     timer.Dispose();
-
                 }
                 return;
             }
         }
-
+        /// <summary>
+        /// 状态栏计时器，用于确定什么时候清除状态栏
+        /// </summary>
         System.Timers.Timer tmStatusBar;
         delegate void DelegateNotifyByStatusBar(string info);
+        /// <summary>
+        /// 向状态栏中写入一条临时消息
+        /// </summary>
+        /// <param name="info"></param>
         public void NotifyByStatusBar(string info)
         {
             if (tmStatusBar != null)
             {
                 tmStatusBar.Stop();
             }
+            LogToListbox(info);
             toolStripStatusLabel1.Text = info;
             tmStatusBar = new System.Timers.Timer()
             {
-                Interval = 1000,
+                //设置5s之后清空状态栏
+                Interval = 5000,
                 Enabled = false
             };
             tmStatusBar.Elapsed += (state, e) =>
             {
-                toolStripStatusLabel1.Text = "Ready";
+                toolStripStatusLabel1.Text = "就绪";
                 tmStatusBar.Stop();
                 tmStatusBar.Dispose();
             };
             tmStatusBar.Start();
 
         }
-        delegate void DelegateModifylvDetail(string name, DateTime date, string size);
+        delegate void DelegateSetMarqueeStyle();
+        delegate void DelegateSetRegularStyle();
 
-        public void ModifylvDetail(string name, DateTime date, string size)
+        /// <summary>
+        /// 在线程中设置ProgressBar的样式为Marquee
+        /// </summary>
+        public void SetMarqueeStyle()
+        {
+            // 使用委托设置ProgressBar的样式为Marquee
+            DelegateSetMarqueeStyle setMarqueeStyle = () =>
+            {
+                progOperation.Style = ProgressBarStyle.Marquee;
+            };
+
+            // 使用控件的Invoke方法确保在主线程中执行设置样式的操作
+            if (progOperation.InvokeRequired)
+            {
+                progOperation.BeginInvoke(setMarqueeStyle);
+            }
+            else
+            {
+                setMarqueeStyle();
+            }
+        }
+
+        /// <summary>
+        /// 在线程中设置ProgressBar的样式为Regular
+        /// </summary>
+        public void SetRegularStyle()
+        {
+            // 使用委托设置ProgressBar的样式为Regular
+            DelegateSetRegularStyle setRegularStyle = () =>
+            {
+                progOperation.Style = ProgressBarStyle.Blocks;
+            };
+
+            // 使用控件的Invoke方法确保在主线程中执行设置样式的操作
+            if (progOperation.InvokeRequired)
+            {
+                progOperation.BeginInvoke(setRegularStyle);
+            }
+            else
+            {
+                setRegularStyle();
+            }
+        }
+
+        /// <summary>
+        /// 向日志栏中添加一条日志
+        /// </summary>
+        /// <param name="info"></param>
+        /// <param name="bError">如果设置为True，则标记该行。</param>
+        public void LogToListbox(string info, bool bError = false)
+        {
+            // 使用当前时间创建时间戳
+            string timestamp = DateTime.Now.ToString("[HH:mm:ss]");
+
+            // 格式化日志字符串
+            string formattedLog = "+";
+            if (bError) formattedLog = "!";
+            formattedLog += $"{timestamp} {info}";
+
+            // 向 ListBox 中添加日志
+            lbLogs.Items.Add(formattedLog);
+        }
+        /// <summary>
+        /// 允许日志栏执行复制。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void lbLogs_KeyDown(object sender, KeyEventArgs e)
+        {
+            // 检查是否按下了 Ctrl 键和 C 键
+            if (e.Control && e.KeyCode == Keys.C)
+            {
+                if (lbLogs.SelectedItems.Count <= 0) return;
+                // 创建一个 StringBuilder 来存储选定项的文本
+                var selectedItemsText = new List<string>();
+                foreach (var selectedItem in lbLogs.SelectedItems)
+                {
+                    selectedItemsText.Add(lbLogs.GetItemText(selectedItem));
+                }
+
+                // 将选定项的文本连接成一个字符串，每个项之间用换行符分隔
+                string textToCopy = string.Join(Environment.NewLine, selectedItemsText);
+
+                // 将文本复制到剪贴板
+                Clipboard.SetText(textToCopy);
+            }
+        }
+
+        delegate void DelegateModifylvDetail(string name, DateTime date, long size);
+
+        /// <summary>
+        /// 向详细信息ListView中增加记录
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="date"></param>
+        /// <param name="size"></param>
+        public void ModifylvDetail(string name, DateTime date, long size)
         {
             int delete_max = 2;
             if (cbAutoDelete.Checked)
@@ -303,31 +480,61 @@ namespace SaveMyGame
             ListViewItem lvitem = new ListViewItem();
             lvitem.Text = name;
             lvitem.SubItems.Add(date.ToString("yyyy/MM/dd HH:mm:ss.ffff"));
-            lvitem.SubItems.Add(size);
+
+            string strSize = "";
+            if (size <= 1024)
+            {
+                strSize = size.ToString() + "B";
+            }
+            else if ((int)(size / 1024) <= 1024)
+            {
+                strSize = (size / 1024.00).ToString("f2") + "KB";
+            }
+            else if ((int)((size / 1024) / 1024) <= 1024)
+            {
+                strSize = (size / 1024.00 / 1024.00).ToString("f2") + "MB";
+            }
+            else if ((int)((size / 1024) / 1024 / 1024) <= 1024)
+            {
+                strSize = (size / 1024.00 / 1024.00 / 1024.00).ToString("f2") + "GB";
+            }
+            else
+            {
+                strSize = "LARGE:" + size.ToString() + "B";
+            }
+
+            lvitem.SubItems.Add(strSize);
+
             lvDetails.Items.Add(lvitem);
             lvDetails.Items[lvDetails.Items.Count - 1].Selected = true;
             lvDetails.Items[lvDetails.Items.Count - 1].EnsureVisible();
         }
+        
         private bool started = false;
         private void btnSave_Click(object sender, EventArgs e)
         {
-
+            //获取配置
             config.frompath = textBox1.Text;
             config.topath = textBox2.Text;
             config._7zpath = Application.StartupPath + "7z.exe";
             config.interval = (int)nudTime.Value;
+            config.isFastMode = cbFast.Checked;
+            config.bUsing7Z = cbUsing7z.Checked;
 
-            pthsChild = new ParameterizedThreadStart(ArchiveCallTo);
+
+            pthsChild = new ParameterizedThreadStart(ArchiveCallee);
             thChild = new Thread(pthsChild);
             thChild.IsBackground = true;
+
             if (!started)
             {
                 if (textBox1.Text != "" && textBox2.Text != "")
                 {
-                    Debug.WriteLine("thChild.Start(config);");
                     thChild.Start(config);
+                    LogToListbox($"线程 {thChild.ManagedThreadId} 启动");
+
                     started = true;
-                    btnSave.Text = "Stop";
+                    btnSave.Text = "终止";
                     btnSave.BackColor = Color.Red;
                 }
             }
@@ -335,7 +542,7 @@ namespace SaveMyGame
             {
                 //unsafe exit method:
                 //using bool to notify a loop thread.
-                btnSave.Text = "Save";
+                btnSave.Text = "存档";
                 btnSave.BackColor = Color.Green;
                 started = false;
             }
@@ -370,7 +577,7 @@ namespace SaveMyGame
                             + dirInfo.FullName + "\n"
                             + "Last Write: " + dirInfo.LastWriteTime.ToString("yyyy/MM/dd HH:mm:ss.ffff") + "\n"
                             + "Size(KB): " + (int)(dirSize / 1024)
-                            ,"Existing files.",MessageBoxButtons.YesNo,MessageBoxIcon.Question);
+                            , "Existing files.", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                         if (dr == DialogResult.Yes)
                         {
                             try
@@ -391,7 +598,7 @@ namespace SaveMyGame
                         }
                     }
                     System.IO.Directory.CreateDirectory(config.topath + "\\" + ".bak");
-                    Move(config.frompath + "\\", config.topath + "\\" + ".bak");
+                    MoveFiles(config.frompath + "\\", config.topath + "\\" + ".bak");
                 }
                 zipHelper.DecompressFileToDestDirectory(config.topath + "\\" + name, config.frompath);
 
@@ -415,118 +622,224 @@ namespace SaveMyGame
 
             }
         }
-        private void CompressDirectory(string sourceDirectory, string zipFilePath, IProgress<int> progress)
+        /// <summary>
+        /// 获取文件夹大小
+        /// </summary>
+        /// <param name="path">文件夹路径</param>
+        /// <returns></returns>
+        private long CalculateDirectorySize(string path)
         {
-            // Ensure the source directory exists
-            if (!Directory.Exists(sourceDirectory))
+            long totalSize = 0;
+            string[] files = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
+            foreach (string file in files)
             {
-                throw new DirectoryNotFoundException($"Source directory '{sourceDirectory}' not found.");
+                totalSize += new FileInfo(file).Length;
             }
-
-            // Create a new ZIP archive
-            using (FileStream zipToCreate = new FileStream(zipFilePath, FileMode.Create))
+            return totalSize;
+        }
+        /// <summary>
+        /// 获取文件集大小
+        /// </summary>
+        /// <param name="files">文件路径集</param>
+        /// <returns></returns>
+        private long CalculateDirectorySize(string[] files)
+        {
+            long totalSize = 0;
+            foreach (string file in files)
             {
-                using (ZipArchive archive = new ZipArchive(zipToCreate, ZipArchiveMode.Create))
+                totalSize += new FileInfo(file).Length;
+            }
+            return totalSize;
+        }
+        /// <summary>
+        /// 用原生ZipFile创建存档
+        /// </summary>
+        /// <param name="sourceDirectory"></param>
+        /// <param name="zipFilePath"></param>
+        private void CompressDirectory(string sourceDirectory, string zipFilePath, bool replace = false)
+        {
+            if (!System.IO.Directory.Exists(sourceDirectory)) throw new FileNotFoundException($"Source directory {sourceDirectory} is not found.");
+            if (System.IO.File.Exists(zipFilePath) && !replace) throw new IOException($"文件 {zipFilePath} 已存在");
+            if (replace) { if (System.IO.File.Exists(zipFilePath)) File.Delete(zipFilePath); }
+
+            string[] files = Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories);
+
+            // Get the total size of the directory
+            long totalSize = CalculateDirectorySize(files);
+
+            string basePath = sourceDirectory + "\\";
+
+            long processedFileSize = 0;
+
+            using (ZipArchive zip = ZipFile.Open(zipFilePath, ZipArchiveMode.Create))
+            {
+                foreach (string file in files)
                 {
-                    string[] files = Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories);
-                    int totalFiles = files.Length;
-                    int filesProcessed = 0;
-
-                    foreach (string file in files)
+                    try
                     {
-                        string relativePath = file.Substring(sourceDirectory.Length + 1);
-                        ZipArchiveEntry entry = archive.CreateEntryFromFile(file, relativePath);
+                        string relativePath = file.Replace(basePath, "");
+                        zip.CreateEntryFromFile(file, relativePath);
 
-                        // Report progress
-                        filesProcessed++;
-                        int percentComplete = (int)((float)filesProcessed / totalFiles * 100);
-                        progress.Report(percentComplete);
+                        processedFileSize += new FileInfo(file).Length;
+                        int progressPercentage = (int)((double)processedFileSize / totalSize * 100);
+                        UpdateProgress(progressPercentage);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"压缩 {file} 时遇到问题： {ex.Message}");
+                        continue;
                     }
                 }
             }
         }
+        /// <summary>
+        /// 更新进度条进度
+        /// </summary>
+        /// <param name="value"></param>
+        private void UpdateProgress(int value)
+        {
+            if (progOperation.InvokeRequired)
+            {
+                progOperation.BeginInvoke(new Action<int>(UpdateProgress), value);
+            }
+            else
+            {
+                progOperation.Value = value;
+            }
+        }
+
 
         public bool ManuallySaved = false;
         private void btnManSave_Click(object sender, EventArgs e)
         {
-            
+            //获取配置
             config.frompath = textBox1.Text;
             config.topath = textBox2.Text;
             config._7zpath = Application.StartupPath + "7z.exe";
             config.interval = (int)nudTime.Value;
             config.isFastMode = cbFast.Checked;
+            config.bUsing7Z = cbUsing7z.Checked;
 
-            if (!System.IO.Directory.Exists(config.frompath)
-                || !System.IO.Directory.Exists(config.topath))
+            //确定文件夹存在且合法
+            if (!System.IO.Directory.Exists(config.frompath))
             {
+                LogToListbox($"{config.frompath}不存在", true);
                 return;
             }
-            SevenZipCmdHelper _7zHelper = new SevenZipCmdHelper(config._7zpath);
+            //确定文件名
+            DateTime dt = DateTime.Now;
+            string filename = dt.ToString("yyMMddhhmmssffffff");
 
-            /*
-             * System.Timers.Timer will create another thread.
-             * This is a monitor thread for timer manage and stop.
-             */
-            try
+            if (config.bUsing7Z) { filename += ".7z"; }
+            else { filename += ".zip"; }
+
+            string savepath = config.topath + "\\" + filename;
+
+            if (config.bUsing7Z)
             {
-                Task task = new Task(() =>
+                SevenZipCmdHelper _7zHelper = new SevenZipCmdHelper(config._7zpath);
+                try
                 {
-                    if (!ManuallySaved)
+                    Task task = new Task(() =>
                     {
-                        DateTime dt = DateTime.Now;
-                        string name = dt.ToString("yyMMddhhmmssffffff") + ".7z";
-                        string savepath = config.topath + "\\" + name;
-                        _7zHelper.CompressDirectory(
-                            config.frompath + "/*.*",
-                            savepath,
-                            config.isFastMode);
+                        //本应该检测文件是否存在，但是由于使用时间戳的6位毫秒形式保存文件，则不太可能存在一样的文件。
 
-                        //Notify user by status bar
-                        //repeatable structure.
-                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                        this.BeginInvoke(delegateNotifyByStatusBar,
-                                new object[] {
-                                savepath  + " saved."
-                                });
-                        DelegateModifylvDetail de = new DelegateModifylvDetail(ModifylvDetail);
-                        string strSize = "";
-                        long size = new System.IO.FileInfo(savepath).Length;
-                        if (size <= 1024)
-                        {
-                            strSize = size.ToString() + "B";
-                        }
-                        else if ((int)(size / 1024) <= 1024)
-                        {
-                            strSize = (size / 1024.00).ToString("f2") + "KB";
-                        }
-                        else if ((int)((size / 1024) / 1024) <= 1024)
-                        {
-                            strSize = (size / 1024.00 / 1024.00).ToString("f2") + "MB";
-                        }
-                        else
-                        {
-                            strSize = "LARGE:" + size.ToString() + "B";
-                        }
-                        this.BeginInvoke(de,
-                            new object[] {
-                        name,
-                        dt,
-                        strSize
-                            }
-                        );
-                        ManuallySaved = true;
-                    };
-                });
-                task.Start();
+                        Debug.WriteLine("7z attempt to compress path " + config.frompath + "/*.*");
 
+                        Task task = new Task(() => _7zHelper.CompressDirectory(config.frompath + "/*.*", savepath, config.isFastMode));
+                        try
+                        {
+                            //将进度条设置为Marquee
+                            DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
+                            this.BeginInvoke((SetMarqueeStyle));
+
+                            task.Start();
+                            task.Wait();
+
+                        }
+                        catch (Exception ex)
+                        {
+                            NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
+                            progOperation.BackColor = Color.Red;
+                        }
+                        finally
+                        {
+                            //通过状态栏通知用户
+                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+
+                            //确定文件夹大小
+                            string[] files = Directory.GetFiles(config.frompath, "*", SearchOption.AllDirectories);
+                            long totalSize = CalculateDirectorySize(files);
+
+                            //向ListView中添加详细记录
+                            DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
+                            this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
+
+                            //将进度条设置为Regular
+                            DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                            this.BeginInvoke((SetRegularStyle));
+                        }
+                    });
+                    task.Start();
+
+                }
+                catch (Exception ex)
+                {
+                    LogToListbox($"压缩时出现错误: {ex.Message}");
+                    Debug.WriteLine("Exception@thread: " + ex.Message);
+                    return;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine("Exception@thread: " + ex.Message);
-                ManuallySaved = false;
+                string sourceDirectory = config.frompath;
+                string zipFilePath = savepath;
+
+                // Disable compress button during compression
+                btnManSave.Enabled = false;
+
+                // Initialize progress bar
+                progOperation.Minimum = 0;
+                progOperation.Maximum = 100;
+                progOperation.Value = 0;
+
+                progOperation.BackColor = Color.Green;
+
+                Task task = new Task(() =>
+                    {
+                        CompressDirectory(sourceDirectory, zipFilePath, true);
+                    }
+                );
+                try
+                {
+                    task.Start();
+                }
+                catch (Exception ex)
+                {
+                    NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
+                    progOperation.BackColor = Color.Red;
+                    progOperation.Value = 100;
+                }
+                finally
+                {
+                    btnManSave.Enabled = true;
+                    //通过状态栏通知用户
+                    DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                    this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+
+                    //确定文件夹大小
+                    string[] files = Directory.GetFiles(config.frompath, "*", SearchOption.AllDirectories);
+                    long totalSize = CalculateDirectorySize(files);
+
+                    //向ListView中添加详细记录
+                    DelegateModifylvDetail delegateModifylvDetail = new DelegateModifylvDetail(ModifylvDetail);
+                    this.BeginInvoke(delegateModifylvDetail, new object[] { savepath, dt, totalSize });
+                }
                 return;
             }
-            ManuallySaved = false;
         }
+
+
     }
 }
