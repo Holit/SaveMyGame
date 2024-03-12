@@ -1,11 +1,8 @@
 ﻿using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO.Compression;
-using System.Windows.Forms;
 using SaveMyGame.src;
 using SaveMyGame.src.Models;
-using SharpCompress.Common;
 
 namespace SaveMyGame
 {
@@ -19,8 +16,12 @@ namespace SaveMyGame
         /// </summary>
         void ReadConfig()
         {
-            runtimeConfig = db.ApplicationConfigs.FirstOrDefault() ?? new();
-            if (runtimeConfig == default(ApplicationConfig)) db.ApplicationConfigs.Add(runtimeConfig);
+            runtimeConfig = db.ApplicationConfigs.FirstOrDefault();
+            if (runtimeConfig == default(ApplicationConfig))
+            {
+                runtimeConfig = new();
+                db.ApplicationConfigs.Add(runtimeConfig); 
+            }
             db.SaveChanges();
             tbFrom.Text = runtimeConfig.FromPath;
             tbSaveto.Text = runtimeConfig.ToPath;

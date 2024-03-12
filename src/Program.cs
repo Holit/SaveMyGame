@@ -1,8 +1,3 @@
-using SharpCompress.Common;
-using SharpCompress.Readers;
-using SharpCompress.Readers.Zip;
-using SharpCompress.Writers.Zip;
-
 namespace SaveMyGame.src
 {
     internal static class Program
