@@ -148,7 +148,14 @@ namespace SaveMyGame
             lvDetails.Columns.Add("日期", (int)(0.5 * lvDetails.Size.Width));
             lvDetails.Columns.Add("未压缩大小", (int)(0.2 * lvDetails.Size.Width));
 
-            tbSaveto.Text = Application.StartupPath;
+            if(string.IsNullOrEmpty(runtimeConfig.topath))
+            {
+                tbSaveto.Text = Application.StartupPath;
+            }
+            else if(!Directory.Exists(runtimeConfig.topath))
+            {
+                tbSaveto.Text = Application.StartupPath;
+            }
 
             //查找7z文件
             if (string.IsNullOrEmpty(runtimeConfig._7zpath))
@@ -938,9 +945,6 @@ namespace SaveMyGame
                             NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
                             progOperation.BackColor = Color.Red;
                         }
-                        finally
-                        {
-                        }
                     });
                     task.Start();
 
@@ -992,7 +996,6 @@ namespace SaveMyGame
                     progOperation.BackColor = Color.Red;
                     progOperation.Value = 100;
                 }
-                return;
             }
 
             btnManSave.Enabled = true;

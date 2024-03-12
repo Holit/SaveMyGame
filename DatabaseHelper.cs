@@ -24,8 +24,8 @@ namespace SaveMyGame
             if (!System.IO.File.Exists(DatabaseFileName))
             {
                 SQLiteConnection.CreateFile(DatabaseFileName);
-                CreateConfigTable();
             }
+            CreateConfigTable();
             CreateFileRecordsTable();
         }
 
