@@ -34,5 +34,5 @@
 dotnet publish
 ```
 
-使用PublishSingleFile+win-x86生成文件体积为15M
+使用PublishSingleFile+win-x86生成文件体积为6.5M
 
