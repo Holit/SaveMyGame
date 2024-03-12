@@ -1,4 +1,4 @@
-namespace SaveMyGame
+namespace SaveMyGame.src
 {
     internal static class Program
     {

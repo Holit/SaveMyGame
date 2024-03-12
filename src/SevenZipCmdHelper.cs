@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SaveMyGame
+namespace SaveMyGame.src
 {
     public class SevenZipCmdHelper
     {
         // Fields
         private string? _7zInstallPath = @"C:\Program Files\7-Zip\7za.exe";
-        
+
         /// <summary>
         /// 指定7z支持文件，如果不指定，将从几个可能的位置查找
         /// </summary>
@@ -39,7 +39,7 @@ namespace SaveMyGame
             }
             else
             {
-                this._7zInstallPath = str7zInstallPath;
+                _7zInstallPath = str7zInstallPath;
             }
         }
 
@@ -55,7 +55,7 @@ namespace SaveMyGame
             bool bFastZip = false)
         {
             Process process = new Process();
-            process.StartInfo.FileName = this._7zInstallPath;
+            process.StartInfo.FileName = _7zInstallPath;
             process.StartInfo.Arguments = " a -t7z -mx=0 -mmt=16 -r \"" + strOutFilePath + "\" \"" + strInDirectoryPath + "\"";
             if (!bFastZip)
             {
@@ -88,7 +88,7 @@ namespace SaveMyGame
                 throw new ArgumentNullException(nameof(strOutFilePath));
             }
             Process process = new Process();
-            process.StartInfo.FileName = this._7zInstallPath;
+            process.StartInfo.FileName = _7zInstallPath;
             process.StartInfo.Arguments = " a -t7z -mx -ms=on -m0=LZMA2 \"" + strOutFilePath + "\" \"" + strInFilePath + "\"";
             //隐藏DOS窗口
             process.StartInfo.UseShellExecute = false;
@@ -116,7 +116,7 @@ namespace SaveMyGame
                 throw new ArgumentNullException(nameof(strOutDirectoryPath));
             }
             Process process = new Process();
-            process.StartInfo.FileName = this._7zInstallPath;
+            process.StartInfo.FileName = _7zInstallPath;
             process.StartInfo.Arguments = " x \"" + strInFilePath + "\" -o\"" + strOutDirectoryPath + "\" -r -aoa";
             //隐藏DOS窗口
             process.StartInfo.UseShellExecute = false;

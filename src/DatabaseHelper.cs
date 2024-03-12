@@ -6,7 +6,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SaveMyGame
+namespace SaveMyGame.src
 {
     public class DatabaseHelper
     {
@@ -21,7 +21,7 @@ namespace SaveMyGame
 
         private void InitializeDatabase()
         {
-            if (!System.IO.File.Exists(DatabaseFileName))
+            if (!File.Exists(DatabaseFileName))
             {
                 SQLiteConnection.CreateFile(DatabaseFileName);
             }
@@ -130,9 +130,9 @@ namespace SaveMyGame
 
         public void InsertFileRecord(archiveRecord record)
         {
-            InsertFileRecord(record.filePath, 
-                record.date, 
-                record.restorePath, 
+            InsertFileRecord(record.filePath,
+                record.date,
+                record.restorePath,
                 record.size);
         }
         public void InsertFileRecord(string? filePath, DateTime date, string? restorePath, long size)
@@ -227,10 +227,10 @@ namespace SaveMyGame
 
                             archiveRecord record = new archiveRecord();
                             record.filePath = filePath;
-                            record.date = date; 
+                            record.date = date;
                             record.size = size;
                             record.restorePath = restorePath;
-                            
+
                             records.Add(record);
                         }
                     }
