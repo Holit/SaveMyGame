@@ -60,10 +60,10 @@
             // btnSave
             // 
             btnSave.BackColor = Color.Green;
-            btnSave.Location = new Point(508, 106);
-            btnSave.Margin = new Padding(4);
+            btnSave.Location = new Point(254, 58);
+            btnSave.Margin = new Padding(2);
             btnSave.Name = "btnSave";
-            btnSave.Size = new Size(192, 75);
+            btnSave.Size = new Size(96, 41);
             btnSave.TabIndex = 15;
             btnSave.Text = "存档";
             btnSave.UseVisualStyleBackColor = false;
@@ -72,45 +72,49 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(12, 13);
-            label1.Margin = new Padding(4, 0, 4, 0);
+            label1.Location = new Point(6, 7);
+            label1.Margin = new Padding(2, 0, 2, 0);
             label1.Name = "label1";
-            label1.Size = new Size(38, 31);
+            label1.Size = new Size(20, 17);
             label1.TabIndex = 14;
             label1.Text = "自";
             // 
             // tbFrom
             // 
-            tbFrom.Location = new Point(58, 7);
-            tbFrom.Margin = new Padding(4);
+            tbFrom.Location = new Point(29, 4);
+            tbFrom.Margin = new Padding(2);
             tbFrom.Name = "tbFrom";
             tbFrom.ReadOnly = true;
-            tbFrom.Size = new Size(552, 38);
+            tbFrom.Size = new Size(278, 23);
             tbFrom.TabIndex = 13;
+            // 
+            // timer1
+            // 
+            timer1.Tick += timer1_Tick;
             // 
             // statusStrip1
             // 
             statusStrip1.ImageScalingSize = new Size(32, 32);
             statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripStatusLabel1 });
-            statusStrip1.Location = new Point(0, 838);
+            statusStrip1.Location = new Point(0, 478);
             statusStrip1.Name = "statusStrip1";
-            statusStrip1.Padding = new Padding(0, 0, 14, 0);
-            statusStrip1.Size = new Size(704, 41);
+            statusStrip1.Padding = new Padding(0, 0, 7, 0);
+            statusStrip1.Size = new Size(357, 22);
             statusStrip1.TabIndex = 20;
             statusStrip1.Text = "statusStrip1";
             // 
             // toolStripStatusLabel1
             // 
             toolStripStatusLabel1.Name = "toolStripStatusLabel1";
-            toolStripStatusLabel1.Size = new Size(62, 31);
+            toolStripStatusLabel1.Size = new Size(32, 17);
             toolStripStatusLabel1.Text = "就绪";
             // 
             // btn_FromDirSel
             // 
-            btn_FromDirSel.Location = new Point(616, 2);
-            btn_FromDirSel.Margin = new Padding(4);
+            btn_FromDirSel.Location = new Point(308, 1);
+            btn_FromDirSel.Margin = new Padding(2);
             btn_FromDirSel.Name = "btn_FromDirSel";
-            btn_FromDirSel.Size = new Size(86, 47);
+            btn_FromDirSel.Size = new Size(43, 26);
             btn_FromDirSel.TabIndex = 19;
             btn_FromDirSel.Text = "...";
             btn_FromDirSel.UseVisualStyleBackColor = true;
@@ -120,11 +124,11 @@
             // 
             lvDetails.FullRowSelect = true;
             lvDetails.GridLines = true;
-            lvDetails.Location = new Point(12, 241);
-            lvDetails.Margin = new Padding(4);
+            lvDetails.Location = new Point(6, 132);
+            lvDetails.Margin = new Padding(2);
             lvDetails.MultiSelect = false;
             lvDetails.Name = "lvDetails";
-            lvDetails.Size = new Size(688, 376);
+            lvDetails.Size = new Size(346, 208);
             lvDetails.TabIndex = 18;
             lvDetails.UseCompatibleStateImageBehavior = false;
             lvDetails.View = View.Details;
@@ -132,31 +136,31 @@
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(12, 105);
-            label2.Margin = new Padding(4, 0, 4, 0);
+            label2.Location = new Point(6, 58);
+            label2.Margin = new Padding(2, 0, 2, 0);
             label2.Name = "label2";
-            label2.Size = new Size(113, 31);
+            label2.Size = new Size(58, 17);
             label2.TabIndex = 17;
             label2.Text = "计时器(s)";
             // 
             // nudTime
             // 
-            nudTime.Location = new Point(133, 103);
-            nudTime.Margin = new Padding(4);
+            nudTime.Location = new Point(66, 56);
+            nudTime.Margin = new Padding(2);
             nudTime.Maximum = new decimal(new int[] { 3600, 0, 0, 0 });
             nudTime.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudTime.MinimumSize = new Size(116, 0);
+            nudTime.MinimumSize = new Size(58, 0);
             nudTime.Name = "nudTime";
-            nudTime.Size = new Size(116, 38);
+            nudTime.Size = new Size(58, 23);
             nudTime.TabIndex = 16;
             nudTime.Value = new decimal(new int[] { 60, 0, 0, 0 });
             // 
             // btnRestore
             // 
-            btnRestore.Location = new Point(505, 759);
-            btnRestore.Margin = new Padding(4);
+            btnRestore.Location = new Point(252, 416);
+            btnRestore.Margin = new Padding(2);
             btnRestore.Name = "btnRestore";
-            btnRestore.Size = new Size(192, 69);
+            btnRestore.Size = new Size(96, 38);
             btnRestore.TabIndex = 21;
             btnRestore.Text = "恢复";
             toolTip1.SetToolTip(btnRestore, "如果未选中，则默认恢复最近的存档");
@@ -165,10 +169,10 @@
             // 
             // btn_ToDirSel
             // 
-            btn_ToDirSel.Location = new Point(616, 57);
-            btn_ToDirSel.Margin = new Padding(4);
+            btn_ToDirSel.Location = new Point(308, 31);
+            btn_ToDirSel.Margin = new Padding(2);
             btn_ToDirSel.Name = "btn_ToDirSel";
-            btn_ToDirSel.Size = new Size(86, 47);
+            btn_ToDirSel.Size = new Size(43, 26);
             btn_ToDirSel.TabIndex = 25;
             btn_ToDirSel.Text = "...";
             btn_ToDirSel.UseVisualStyleBackColor = true;
@@ -177,29 +181,29 @@
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(12, 59);
-            label3.Margin = new Padding(4, 0, 4, 0);
+            label3.Location = new Point(6, 32);
+            label3.Margin = new Padding(2, 0, 2, 0);
             label3.Name = "label3";
-            label3.Size = new Size(38, 31);
+            label3.Size = new Size(20, 17);
             label3.TabIndex = 24;
             label3.Text = "到";
             // 
             // tbSaveto
             // 
-            tbSaveto.Location = new Point(57, 55);
-            tbSaveto.Margin = new Padding(4);
+            tbSaveto.Location = new Point(28, 30);
+            tbSaveto.Margin = new Padding(2);
             tbSaveto.Name = "tbSaveto";
             tbSaveto.ReadOnly = true;
-            tbSaveto.Size = new Size(553, 38);
+            tbSaveto.Size = new Size(278, 23);
             tbSaveto.TabIndex = 23;
             // 
             // cbDeleteOldFiles
             // 
             cbDeleteOldFiles.AutoSize = true;
-            cbDeleteOldFiles.Location = new Point(12, 759);
-            cbDeleteOldFiles.Margin = new Padding(4);
+            cbDeleteOldFiles.Location = new Point(6, 416);
+            cbDeleteOldFiles.Margin = new Padding(2);
             cbDeleteOldFiles.Name = "cbDeleteOldFiles";
-            cbDeleteOldFiles.Size = new Size(238, 35);
+            cbDeleteOldFiles.Size = new Size(123, 21);
             cbDeleteOldFiles.TabIndex = 22;
             cbDeleteOldFiles.Text = "保存时删除旧项目";
             toolTip1.SetToolTip(cbDeleteOldFiles, "保存新存档时自动删除旧存档，目标文件夹内按照所有文件计算，不超过10个文件。");
@@ -210,10 +214,10 @@
             // 
             cbClearBeforeRestore.AutoSize = true;
             cbClearBeforeRestore.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
-            cbClearBeforeRestore.Location = new Point(12, 797);
-            cbClearBeforeRestore.Margin = new Padding(4);
+            cbClearBeforeRestore.Location = new Point(6, 437);
+            cbClearBeforeRestore.Margin = new Padding(2);
             cbClearBeforeRestore.Name = "cbClearBeforeRestore";
-            cbClearBeforeRestore.Size = new Size(286, 35);
+            cbClearBeforeRestore.Size = new Size(147, 21);
             cbClearBeforeRestore.TabIndex = 26;
             cbClearBeforeRestore.Text = "恢复时清空目标文件夹";
             cbClearBeforeRestore.UseVisualStyleBackColor = true;
@@ -221,10 +225,10 @@
             // 
             // btnManSave
             // 
-            btnManSave.Location = new Point(328, 106);
-            btnManSave.Margin = new Padding(4);
+            btnManSave.Location = new Point(164, 58);
+            btnManSave.Margin = new Padding(2);
             btnManSave.Name = "btnManSave";
-            btnManSave.Size = new Size(176, 75);
+            btnManSave.Size = new Size(88, 41);
             btnManSave.TabIndex = 28;
             btnManSave.Text = "手动存档";
             btnManSave.UseVisualStyleBackColor = true;
@@ -233,9 +237,10 @@
             // cbFast
             // 
             cbFast.AutoSize = true;
-            cbFast.Location = new Point(12, 146);
+            cbFast.Location = new Point(6, 80);
+            cbFast.Margin = new Padding(2);
             cbFast.Name = "cbFast";
-            cbFast.Size = new Size(118, 35);
+            cbFast.Size = new Size(63, 21);
             cbFast.TabIndex = 29;
             cbFast.Text = "仅存储";
             toolTip1.SetToolTip(cbFast, "使用仅存储策略压缩，减少压缩、解压缩时间");
@@ -244,17 +249,19 @@
             // 
             // progOperation
             // 
-            progOperation.Location = new Point(80, 188);
+            progOperation.Location = new Point(40, 103);
+            progOperation.Margin = new Padding(2);
             progOperation.Name = "progOperation";
-            progOperation.Size = new Size(617, 46);
+            progOperation.Size = new Size(308, 25);
             progOperation.TabIndex = 30;
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(12, 194);
+            label4.Location = new Point(6, 106);
+            label4.Margin = new Padding(2, 0, 2, 0);
             label4.Name = "label4";
-            label4.Size = new Size(62, 31);
+            label4.Size = new Size(32, 17);
             label4.TabIndex = 31;
             label4.Text = "进度";
             // 
@@ -262,30 +269,33 @@
             // 
             lbLogs.FormattingEnabled = true;
             lbLogs.HorizontalScrollbar = true;
-            lbLogs.Location = new Point(12, 624);
+            lbLogs.ItemHeight = 17;
+            lbLogs.Location = new Point(6, 342);
+            lbLogs.Margin = new Padding(2);
             lbLogs.Name = "lbLogs";
             lbLogs.SelectionMode = SelectionMode.MultiSimple;
-            lbLogs.Size = new Size(688, 128);
+            lbLogs.Size = new Size(346, 72);
             lbLogs.TabIndex = 32;
             lbLogs.KeyDown += lbLogs_KeyDown;
             // 
             // cbUsing7z
             // 
             cbUsing7z.AutoSize = true;
-            cbUsing7z.Location = new Point(131, 148);
+            cbUsing7z.Location = new Point(66, 81);
+            cbUsing7z.Margin = new Padding(2);
             cbUsing7z.Name = "cbUsing7z";
-            cbUsing7z.Size = new Size(72, 35);
+            cbUsing7z.Size = new Size(60, 21);
             cbUsing7z.TabIndex = 33;
-            cbUsing7z.Text = "7z";
-            toolTip1.SetToolTip(cbUsing7z, "利用7z压缩器完成压缩操作， 这需要7z文件支持");
+            cbUsing7z.Text = "LZMA";
+            toolTip1.SetToolTip(cbUsing7z, "利用LZMA算法完成压缩操作");
             cbUsing7z.UseVisualStyleBackColor = true;
             cbUsing7z.CheckedChanged += cbUsing7z_CheckedChanged;
             // 
             // MainForm
             // 
-            AutoScaleDimensions = new SizeF(14F, 31F);
+            AutoScaleDimensions = new SizeF(7F, 17F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(704, 879);
+            ClientSize = new Size(357, 500);
             Controls.Add(cbUsing7z);
             Controls.Add(lbLogs);
             Controls.Add(label4);
@@ -307,11 +317,11 @@
             Controls.Add(tbSaveto);
             Controls.Add(cbDeleteOldFiles);
             KeyPreview = true;
-            Margin = new Padding(4);
+            Margin = new Padding(2);
             MaximizeBox = false;
-            MaximumSize = new Size(730, 950);
+            MaximumSize = new Size(373, 539);
             MinimizeBox = false;
-            MinimumSize = new Size(730, 950);
+            MinimumSize = new Size(373, 539);
             Name = "MainForm";
             Text = "文件夹存档工具";
             FormClosing += MainForm_FormClosing;
