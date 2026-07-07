@@ -738,6 +738,9 @@ namespace SaveMyGame
                             //将进度条设置为Regular
                             DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
                             this.BeginInvoke((SetRegularStyle));
+
+                            // 压缩完成后恢复按钮
+                            this.BeginInvoke(new Action(() => btnManSave.Enabled = true));
                         });
                         try
                         {
@@ -792,6 +795,9 @@ namespace SaveMyGame
                         //更新记录
                         DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
                         this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
+
+                        // 压缩完成后恢复按钮
+                        this.BeginInvoke(new Action(() => btnManSave.Enabled = true));
                     }
                 );
                 try
@@ -805,8 +811,6 @@ namespace SaveMyGame
                     progOperation.Value = 100;
                 }
             }
-
-            btnManSave.Enabled = true;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
