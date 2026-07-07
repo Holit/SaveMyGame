@@ -58,8 +58,9 @@ namespace SaveMyGame
         /// <returns></returns>
         void MoveFiles(string sourcePath, string destPath) //文件移动函数
         {
-            if (string.IsNullOrEmpty(runtimeConfig.ToPath) || !IsPathWithinDirectory(sourcePath, runtimeConfig.ToPath))
-                throw new InvalidOperationException($"Source path '{sourcePath}' is outside allowed directory.");
+            if (!IsPathWithinDirectory(sourcePath, runtimeConfig.FromPath)
+            || !IsPathWithinDirectory(destPath, runtimeConfig.ToPath))
+                throw new InvalidOperationException("Path is outside allowed directory.");
             DirectoryInfo dir = new DirectoryInfo(sourcePath);
             if (Directory.Exists(sourcePath))
             {
