@@ -884,7 +884,6 @@ namespace SaveMyGame
                     BeginInvoke((SetMarqueeStyle));
 
                     task.Start();
-                    task.Wait();
 
                 }
                 catch (Exception ex)
