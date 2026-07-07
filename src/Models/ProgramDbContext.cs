@@ -4,7 +4,12 @@ namespace SaveMyGame.src.Models
 {
     internal class ProgramDbContext : DbContext
     {
-        public static ProgramDbContext Create() => new();
+        public static ProgramDbContext Create()
+        {
+            var db = new ProgramDbContext();
+            db.Database.EnsureCreated();
+            return db;
+        }
 
         public DbSet<ApplicationConfig> ApplicationConfigs { get; set; }
         public DbSet<FileRecord> FileRecords { get; set; }

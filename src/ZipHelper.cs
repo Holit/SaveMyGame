@@ -9,6 +9,10 @@ namespace SaveMyGame.src
     {
         public static void CompressDirectory(string strInDirectoryPath, string strOutFilePath, bool bFastZip = false)
         {
+            if (string.IsNullOrWhiteSpace(strInDirectoryPath) || !Directory.Exists(strInDirectoryPath))
+                throw new DirectoryNotFoundException($"Directory {strInDirectoryPath} not found");
+            if (string.IsNullOrWhiteSpace(strOutFilePath))
+                throw new ArgumentNullException(nameof(strOutFilePath));
             int compressionLevel = bFastZip ? 1 : 9;
             using var archive = ZipArchive.CreateArchive();
             archive.AddAllFromDirectory(strInDirectoryPath);
