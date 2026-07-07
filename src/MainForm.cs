@@ -451,16 +451,16 @@ namespace SaveMyGame
                 {
                     timer1.Interval = runtimeConfig.Interval * 1000;
                     timer1.Start();
-                    LogToListbox($"线程启动");
+                    StartFileWatcher();
+                    LogToListbox($"自动存档已启动 (防抖:{DebounceIntervalMs / 1000}s, 冷却:{runtimeConfig.Interval}s)");
                     btnSave.Text = "终止";
                     btnSave.BackColor = Color.Red;
                 }
             }
             else
             {
-                //unsafe exit method:
-                //using bool to notify a loop thread.
                 timer1.Stop();
+                StopFileWatcher();
                 btnSave.Text = "存档";
                 btnSave.BackColor = Color.Green;
             }
@@ -468,123 +468,37 @@ namespace SaveMyGame
 
         private void btnRestore_Click(object sender, EventArgs e)
         {
-            //无效操作
-            //按下恢复后，终止计时器
+            // 按下恢复后，终止计时器和文件监控
             if (timer1.Enabled)
             {
                 timer1.Stop();
+                StopFileWatcher();
                 btnSave.Text = "存档";
                 btnSave.BackColor = Color.Green;
             }
 
-            DelegateNotifyByStatusBar delegateNotifyByStatusBar;
-            //确定文件列表中存在文件
-            if (lvDetails.Items.Count > 0)
+            if (lvDetails.Items.Count == 0)
             {
-                //如果未选中，默认恢复最近的一个
-                if (lvDetails.SelectedItems.Count == 0)
-                {
-                    lvDetails.Items[lvDetails.Items.Count - 1].Selected = true;
-                }
-
-                string name = lvDetails.SelectedItems[0].SubItems[0].Text;
-                using var db = ProgramDbContext.Create();
-                FileRecord zipToRestore = db.FileRecords.FirstOrDefault(b => b.FilePath.EndsWith(name));
-                if (zipToRestore == null)
-                {
-                    NotifyByStatusBar($"未找到匹配的存档记录: {name}");
-                    return;
-                }
-
-
-                //如果指定了恢复前清空目标文件夹
-                Task taskRecyle = new Task(() => { });
-                if (runtimeConfig.IsClearBeforeRestore)
-                {
-                    taskRecyle = new Task(() =>
-                    {
-                        if (Directory.Exists(runtimeConfig.FromPath))
-                        {
-                            Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
-                                                        runtimeConfig.FromPath,
-                                                        Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
-                                                        Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
-
-                            //通过状态栏通知用户
-                            delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                            this.BeginInvoke(delegateNotifyByStatusBar, new object[] { $"文件夹 {runtimeConfig.FromPath} 已移动到回收站" });
-                        }
-
-                        //将进度条设置为Regular
-                        DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                        this.BeginInvoke((SetRegularStyle));
-                    });
-
-                    try
-                    {
-                        //将进度条设置为Marquee
-                        DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
-                        this.BeginInvoke((SetMarqueeStyle));
-
-                        taskRecyle.Start();
-                    }
-                    catch (Exception ex)
-                    {
-                        NotifyByStatusBar($"回收文件夹时出现错误: {ex.Message}");
-                        progOperation.BackColor = Color.Red;
-                    }
-
-                }
-                Task task = new Task(() =>
-                {
-                    try
-                    {
-                        if (runtimeConfig.IsClearBeforeRestore) taskRecyle.Wait();
-                        string? restorePath = zipToRestore.RestorePath;
-                        if (!Directory.Exists(restorePath))
-                        {
-                            if (!string.IsNullOrEmpty(restorePath))
-                            {
-                                Directory.CreateDirectory(restorePath);
-                            }
-                        }
-                        ZipHelper.DecompressFileToDestDirectory(zipToRestore.FilePath, restorePath);
-
-                        //通过状态栏通知用户
-                        delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                        this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "解压缩到:" + restorePath });
-                    }
-                    catch (Exception ex)
-                    {
-                        this.BeginInvoke(new Action(() => NotifyByStatusBar($"解压缩时出现错误: {ex.Message}")));
-                    }
-                    finally
-                    {
-                        //将进度条设置为Regular
-                        DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                        this.BeginInvoke((SetRegularStyle));
-                    }
-                });
-                try
-                {
-                    //将进度条设置为Marquee
-                    DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
-                    this.BeginInvoke((SetMarqueeStyle));
-
-                    task.Start();
-                }
-                catch (Exception ex)
-                {
-                    NotifyByStatusBar($"解压缩时出现错误: {ex.Message}");
-                    progOperation.BackColor = Color.Red;
-                }
+                NotifyByStatusBar("没有存档:" + runtimeConfig.FromPath);
+                return;
             }
-            else
+
+            // 如果未选中，默认恢复最近的一个
+            if (lvDetails.SelectedItems.Count == 0)
             {
-                //通过状态栏通知用户
-                delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "没有存档:" + runtimeConfig.FromPath });
+                lvDetails.Items[lvDetails.Items.Count - 1].Selected = true;
             }
+
+            string name = lvDetails.SelectedItems[0].SubItems[0].Text;
+            using var db = ProgramDbContext.Create();
+            FileRecord? zipToRestore = db.FileRecords.FirstOrDefault(b => b.FilePath.EndsWith(name));
+            if (zipToRestore == null)
+            {
+                NotifyByStatusBar($"未找到匹配的存档记录: {name}");
+                return;
+            }
+
+            DoRestore(zipToRestore);
         }
         /// <summary>
         /// 获取文件夹大小
@@ -678,14 +592,127 @@ namespace SaveMyGame
         /// </summary>
         private volatile bool _isCompressing = false;
 
-        private void btnManSave_Click(object sender, EventArgs e)
+        /// <summary>
+        /// 文件系统监视器，用于检测源文件夹的变化
+        /// </summary>
+        private FileSystemWatcher? _fileWatcher;
+
+        /// <summary>
+        /// 防抖计时器：源文件夹发生变化后重置，超时后触发备份
+        /// </summary>
+        private System.Timers.Timer? _debounceTimer;
+
+        /// <summary>
+        /// 标记自上次备份后源文件夹是否有变化
+        /// </summary>
+        private volatile bool _hasPendingChanges = false;
+
+        /// <summary>
+        /// 上次备份完成的时间，用于控制冷却期
+        /// </summary>
+        private DateTime _lastBackupTime = DateTime.MinValue;
+
+        /// <summary>
+        /// 防抖等待时间（毫秒）：文件夹最后变化后等待此时间再触发备份
+        /// </summary>
+        private const int DebounceIntervalMs = 10000;
+
+        /// <summary>
+        /// 启动 FileSystemWatcher 监控源文件夹变化
+        /// </summary>
+        private void StartFileWatcher()
         {
+            StopFileWatcher();
 
-            //更新并保存配置
-            SaveConfig();
+            if (string.IsNullOrEmpty(runtimeConfig.FromPath) || !Directory.Exists(runtimeConfig.FromPath))
+                return;
 
-            //确定文件夹存在且合法
-            if (string.IsNullOrEmpty(runtimeConfig.FromPath) ||  !Directory.Exists(runtimeConfig.FromPath))
+            _fileWatcher = new FileSystemWatcher(runtimeConfig.FromPath)
+            {
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.FileName
+                             | NotifyFilters.DirectoryName
+                             | NotifyFilters.LastWrite
+                             | NotifyFilters.Size,
+                EnableRaisingEvents = true
+            };
+
+            _fileWatcher.Changed += OnFileSystemChanged;
+            _fileWatcher.Created += OnFileSystemChanged;
+            _fileWatcher.Deleted += OnFileSystemChanged;
+            _fileWatcher.Renamed += OnFileSystemChanged;
+
+            _debounceTimer = new System.Timers.Timer(DebounceIntervalMs)
+            {
+                AutoReset = false
+            };
+            _debounceTimer.Elapsed += OnDebounceTimerElapsed;
+
+            LogToListbox($"文件监控已启动: {runtimeConfig.FromPath}");
+        }
+
+        /// <summary>
+        /// 停止 FileSystemWatcher 和防抖计时器
+        /// </summary>
+        private void StopFileWatcher()
+        {
+            if (_debounceTimer != null)
+            {
+                _debounceTimer.Stop();
+                _debounceTimer.Dispose();
+                _debounceTimer = null;
+            }
+
+            if (_fileWatcher != null)
+            {
+                _fileWatcher.EnableRaisingEvents = false;
+                _fileWatcher.Dispose();
+                _fileWatcher = null;
+                LogToListbox("文件监控已停止");
+            }
+
+            _hasPendingChanges = false;
+        }
+
+        /// <summary>
+        /// 文件系统变化事件处理：记录变化并重置防抖计时器
+        /// </summary>
+        private void OnFileSystemChanged(object sender, FileSystemEventArgs e)
+        {
+            _hasPendingChanges = true;
+
+            // 重置防抖计时器
+            _debounceTimer?.Stop();
+            _debounceTimer?.Start();
+        }
+
+        /// <summary>
+        /// 防抖计时器到期：文件夹已稳定，触发备份
+        /// </summary>
+        private void OnDebounceTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (!_hasPendingChanges || _isCompressing)
+                return;
+
+            // 冷却检查：距上次备份需超过配置间隔
+            double cooldownMs = runtimeConfig.Interval * 1000;
+            if ((DateTime.Now - _lastBackupTime).TotalMilliseconds < cooldownMs)
+                return;
+
+            // 在主线程上触发备份
+            BeginInvoke(new Action(() => DoBackup()));
+        }
+
+        /// <summary>
+        /// 执行备份操作（供 debounce、timer、手动存档共用）
+        /// </summary>
+        /// <param name="onCompleted">备份完成后在主线程执行的回调（如恢复按钮状态）</param>
+        private void DoBackup(Action? onCompleted = null)
+        {
+            if (_isCompressing)
+                return;
+
+            if (string.IsNullOrEmpty(runtimeConfig.FromPath) || !Directory.Exists(runtimeConfig.FromPath))
             {
                 LogToListbox($"{runtimeConfig.FromPath}不存在", true);
                 return;
@@ -695,45 +722,30 @@ namespace SaveMyGame
                 LogToListbox($"目标文件夹无效: {runtimeConfig.ToPath}", true);
                 return;
             }
-            //确定文件名
+
             DateTime dt = DateTime.Now;
             string filename = dt.ToString("yyMMddHHmmssffffff") + ".zip";
-
             string savepath = Path.Combine(runtimeConfig.ToPath, filename);
 
-            // 禁用手动保存按钮
-            btnManSave.Enabled = false;
+            _hasPendingChanges = false;
 
             if (runtimeConfig.IsUsingLZMA)
             {
                 try
                 {
-                    //将进度条设置为Marquee
-                    DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
-                    this.BeginInvoke((SetMarqueeStyle));
-
+                    SetMarqueeStyle();
                     Task task = new Task(() =>
                     {
-                        ZipHelper.CompressDirectory(runtimeConfig.FromPath, savepath, runtimeConfig.IsFastMode);
-
-                        //通过状态栏通知用户
-                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                        BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
-
-                        //确定文件夹大小
-                        string[] files = Directory.GetFiles(runtimeConfig.FromPath, "*", SearchOption.AllDirectories);
-                        long totalSize = CalculateDirectorySize(files);
-
-                        //更新记录
-                        DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
-                        this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
-
-                        //将进度条设置为Regular
-                        DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                        this.BeginInvoke((SetRegularStyle));
-
-                        // 压缩完成后恢复按钮
-                        this.BeginInvoke(new Action(() => btnManSave.Enabled = true));
+                        try
+                        {
+                            _isCompressing = true;
+                            ZipHelper.CompressDirectory(runtimeConfig.FromPath, savepath, runtimeConfig.IsFastMode);
+                            OnBackupCompleted(savepath, dt, onCompleted);
+                        }
+                        finally
+                        {
+                            _isCompressing = false;
+                        }
                     });
                     task.Start();
                 }
@@ -741,59 +753,157 @@ namespace SaveMyGame
                 {
                     NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
                     progOperation.BackColor = Color.Red;
-                    btnManSave.Enabled = true;
+                    onCompleted?.Invoke();
                 }
             }
             else
             {
-                string sourceDirectory = runtimeConfig.FromPath;
+                string? sourceDirectory = runtimeConfig.FromPath;
                 string zipFilePath = savepath;
 
-
-                // Initialize progress bar
                 progOperation.Minimum = 0;
                 progOperation.Maximum = 100;
                 progOperation.Value = 0;
-
                 progOperation.BackColor = Color.Green;
 
-                Task task = new Task(() =>
-                    {
-                        CompressDirectory(sourceDirectory, zipFilePath, true);
-
-                        //通过状态栏通知用户
-                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                        this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
-
-                        //确定文件夹大小
-                        string[] files = Directory.GetFiles(runtimeConfig.FromPath, "*", SearchOption.AllDirectories);
-                        long totalSize = CalculateDirectorySize(files);
-
-                        //更新记录
-                        DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
-                        this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
-
-                        // 压缩完成后恢复按钮
-                        this.BeginInvoke(new Action(() => btnManSave.Enabled = true));
-                    }
-                );
                 try
                 {
+                    Task task = new Task(() =>
+                    {
+                        try
+                        {
+                            _isCompressing = true;
+                            CompressDirectory(sourceDirectory, zipFilePath, true);
+                            OnBackupCompleted(savepath, dt, onCompleted);
+                        }
+                        finally
+                        {
+                            _isCompressing = false;
+                        }
+                    });
                     task.Start();
                 }
                 catch (Exception ex)
                 {
                     NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
                     progOperation.BackColor = Color.Red;
-                    progOperation.Value = 100;
-                    btnManSave.Enabled = true;
+                    onCompleted?.Invoke();
                 }
             }
+        }
+
+        /// <summary>
+        /// 备份完成后的统一处理：记录、更新 UI、更新冷却时间
+        /// </summary>
+        private void OnBackupCompleted(string savepath, DateTime dt, Action? onCompleted = null)
+        {
+            _lastBackupTime = DateTime.Now;
+
+            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+            BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+
+            // 确定文件夹大小
+            string[] files = Directory.GetFiles(runtimeConfig.FromPath, "*", SearchOption.AllDirectories);
+            long totalSize = CalculateDirectorySize(files);
+
+            // 更新记录
+            DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
+            BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
+
+            // 将进度条设置为Regular
+            BeginInvoke((SetRegularStyle));
+
+            // 触发完成回调（如恢复按钮状态）
+            if (onCompleted != null)
+                BeginInvoke(onCompleted);
+        }
+
+        /// <summary>
+        /// 执行恢复操作
+        /// </summary>
+        private void DoRestore(FileRecord zipToRestore)
+        {
+            DelegateNotifyByStatusBar delegateNotifyByStatusBar;
+            Task taskRecyle = new Task(() => { });
+
+            if (runtimeConfig.IsClearBeforeRestore)
+            {
+                taskRecyle = new Task(() =>
+                {
+                    if (Directory.Exists(runtimeConfig.FromPath))
+                    {
+                        Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
+                                                    runtimeConfig.FromPath,
+                                                    Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                                                    Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+
+                        delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                        this.BeginInvoke(delegateNotifyByStatusBar, new object[] { $"文件夹 {runtimeConfig.FromPath} 已移动到回收站" });
+                    }
+
+                    BeginInvoke((SetRegularStyle));
+                });
+
+                try
+                {
+                    SetMarqueeStyle();
+                    taskRecyle.Start();
+                }
+                catch (Exception ex)
+                {
+                    NotifyByStatusBar($"回收文件夹时出现错误: {ex.Message}");
+                    progOperation.BackColor = Color.Red;
+                }
+            }
+
+            Task task = new Task(() =>
+            {
+                try
+                {
+                    if (runtimeConfig.IsClearBeforeRestore) taskRecyle.Wait();
+                    string? restorePath = zipToRestore.RestorePath;
+                    if (!Directory.Exists(restorePath))
+                    {
+                        if (!string.IsNullOrEmpty(restorePath))
+                            Directory.CreateDirectory(restorePath);
+                    }
+                    ZipHelper.DecompressFileToDestDirectory(zipToRestore.FilePath, restorePath);
+
+                    delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                    this.BeginInvoke(delegateNotifyByStatusBar, new object[] { "解压缩到:" + restorePath });
+                }
+                catch (Exception ex)
+                {
+                    this.BeginInvoke(new Action(() => NotifyByStatusBar($"解压缩时出现错误: {ex.Message}")));
+                }
+                finally
+                {
+                    BeginInvoke((SetRegularStyle));
+                }
+            });
+            try
+            {
+                SetMarqueeStyle();
+                task.Start();
+            }
+            catch (Exception ex)
+            {
+                NotifyByStatusBar($"解压缩时出现错误: {ex.Message}");
+                progOperation.BackColor = Color.Red;
+            }
+        }
+
+        private void btnManSave_Click(object sender, EventArgs e)
+        {
+            SaveConfig();
+            btnManSave.Enabled = false;
+            DoBackup(() => btnManSave.Enabled = true);
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveConfig();
+            StopFileWatcher();
         }
 
         private void cbFast_CheckedChanged(object sender, EventArgs e)
@@ -825,121 +935,14 @@ namespace SaveMyGame
         {
             if (_isCompressing) return;
 
-            if (runtimeConfig.IsUsingLZMA)
-            {
-                if (!Directory.Exists(runtimeConfig.FromPath))
-                {
-                    LogToListbox($"{runtimeConfig.FromPath}不存在", true);
-                    return;
-                }
-                //确定文件名
-                DateTime dt = DateTime.Now;
-                string filename = dt.ToString("yyMMddHHmmssffffff") + ".zip";
+            // 如果没有待处理的变化，跳过本次备份
+            if (!_hasPendingChanges) return;
 
-                string savepath = Path.Combine(runtimeConfig.ToPath, filename);
+            // 冷却检查
+            double cooldownMs = runtimeConfig.Interval * 1000;
+            if ((DateTime.Now - _lastBackupTime).TotalMilliseconds < cooldownMs) return;
 
-                //本应该检测文件是否存在，但是由于使用时间戳的6位毫秒形式保存文件，则不太可能存在一样的文件。
-
-                Debug.WriteLine("zip attempt to compress path " + runtimeConfig.FromPath + "/*.*");
-
-                Task task = new Task(() =>
-                {
-                    try
-                    {
-                        _isCompressing = true;
-                        ZipHelper.CompressDirectory(runtimeConfig.FromPath, savepath, runtimeConfig.IsFastMode);
-                        //通过状态栏通知用户
-                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                        BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
-
-                        //确定文件夹大小
-                        string[] files = Directory.GetFiles(runtimeConfig.FromPath, "*", SearchOption.AllDirectories);
-                        long totalSize = CalculateDirectorySize(files);
-
-                        //更新记录
-                        DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
-                        BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
-
-                        //将进度条设置为Regular
-                        DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                        BeginInvoke((SetRegularStyle));
-                    }
-                    finally
-                    {
-                        _isCompressing = false;
-                    }
-                });
-                try
-                {
-                    //将进度条设置为Marquee
-                    DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
-                    BeginInvoke((SetMarqueeStyle));
-
-                    task.Start();
-
-                }
-                catch (Exception ex)
-                {
-                    NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
-                    progOperation.BackColor = Color.Red;
-                }
-            }
-            else
-            {
-                if (!Directory.Exists(runtimeConfig.FromPath))
-                {
-                    LogToListbox($"{runtimeConfig.FromPath}不存在", true);
-                    return;
-                }
-                //确定文件名
-                DateTime dt = DateTime.Now;
-                string filename = dt.ToString("yyMMddHHmmssffffff") + ".zip";
-
-                string savepath = Path.Combine(runtimeConfig.ToPath, filename);
-
-                string? sourceDirectory = runtimeConfig.FromPath;
-                string zipFilePath = savepath;
-
-                progOperation.Minimum = 0;
-                progOperation.Maximum = 100;
-                progOperation.Value = 0;
-
-                progOperation.BackColor = Color.Green;
-
-                Task task = new Task(() =>
-                {
-                    try
-                    {
-                        _isCompressing = true;
-                        CompressDirectory(sourceDirectory, zipFilePath, true);
-                        //通过状态栏通知用户
-                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                        this.BeginInvoke(delegateNotifyByStatusBar, new object[] { savepath + " saved." });
-
-                        //确定文件夹大小
-                        string[] files = Directory.GetFiles(runtimeConfig.FromPath, "*", SearchOption.AllDirectories);
-                        long totalSize = CalculateDirectorySize(files);
-
-                        //更新记录
-                        DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
-                        this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
-                    }
-                    finally
-                    {
-                        _isCompressing = false;
-                    }
-                });
-                try
-                {
-                    task.Start();
-                }
-                catch (Exception ex)
-                {
-                    NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
-                    progOperation.BackColor = Color.Red;
-                    //progOperation.Value = 100;
-                }
-            }
+            DoBackup();
         }
     }
 }
