@@ -717,59 +717,39 @@ namespace SaveMyGame
             {
                 try
                 {
+                    //将进度条设置为Marquee
+                    DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
+                    this.BeginInvoke((SetMarqueeStyle));
+
                     Task task = new Task(() =>
                     {
-                        //本应该检测文件是否存在，但是由于使用时间戳的6位毫秒形式保存文件，则不太可能存在一样的文件。
+                        ZipHelper.CompressDirectory(runtimeConfig.FromPath, savepath, runtimeConfig.IsFastMode);
 
-                        Debug.WriteLine("zip attempt to compress path " + runtimeConfig.FromPath + "/*.*");
+                        //通过状态栏通知用户
+                        DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
+                        BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
 
-                        Task task = new Task(() =>
-                        {
-                            ZipHelper.CompressDirectory(runtimeConfig.FromPath , savepath, runtimeConfig.IsFastMode);
+                        //确定文件夹大小
+                        string[] files = Directory.GetFiles(runtimeConfig.FromPath, "*", SearchOption.AllDirectories);
+                        long totalSize = CalculateDirectorySize(files);
 
-                            //通过状态栏通知用户
-                            DelegateNotifyByStatusBar delegateNotifyByStatusBar = new DelegateNotifyByStatusBar(NotifyByStatusBar);
-                            BeginInvoke(delegateNotifyByStatusBar, new object[] { "存储到:" + savepath });
+                        //更新记录
+                        DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
+                        this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
 
-                            //确定文件夹大小
-                            string[] files = Directory.GetFiles(runtimeConfig.FromPath, "*", SearchOption.AllDirectories);
-                            long totalSize = CalculateDirectorySize(files);
+                        //将进度条设置为Regular
+                        DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
+                        this.BeginInvoke((SetRegularStyle));
 
-
-                            //更新记录
-                            DelegateInsertRecord delegateInsertRecord = new DelegateInsertRecord(InsertRecord);
-                            this.BeginInvoke(delegateInsertRecord, new object[] { savepath, dt, totalSize });
-
-                            //将进度条设置为Regular
-                            DelegateSetRegularStyle delegateSetRegularStyle = new DelegateSetRegularStyle(SetRegularStyle);
-                            this.BeginInvoke((SetRegularStyle));
-
-                            // 压缩完成后恢复按钮
-                            this.BeginInvoke(new Action(() => btnManSave.Enabled = true));
-                        });
-                        try
-                        {
-                            //将进度条设置为Marquee
-                            DelegateSetMarqueeStyle delegateSetMarqueeStyle = new DelegateSetMarqueeStyle(SetMarqueeStyle);
-                            this.BeginInvoke((SetMarqueeStyle));
-
-                            task.Start();
-
-                        }
-                        catch (Exception ex)
-                        {
-                            NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
-                            progOperation.BackColor = Color.Red;
-                        }
+                        // 压缩完成后恢复按钮
+                        this.BeginInvoke(new Action(() => btnManSave.Enabled = true));
                     });
                     task.Start();
-
                 }
                 catch (Exception ex)
                 {
-                    LogToListbox($"压缩时出现错误: {ex.Message}");
-                    Debug.WriteLine("Exception@thread: " + ex.Message);
-                    return;
+                    NotifyByStatusBar($"压缩时出现错误: {ex.Message}");
+                    progOperation.BackColor = Color.Red;
                 }
             }
             else
