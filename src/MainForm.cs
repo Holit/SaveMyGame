@@ -518,7 +518,7 @@ namespace SaveMyGame
 
                 string name = lvDetails.SelectedItems[0].SubItems[0].Text;
                 using var db = ProgramDbContext.Create();
-                FileRecord zipToRestore = db.FileRecords.First(b => b.FilePath.Contains(name));
+                FileRecord zipToRestore = db.FileRecords.First(b => b.FilePath.EndsWith(name));
 
 
                 //如果指定了恢复前清空目标文件夹
