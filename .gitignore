@@ -366,3 +366,6 @@ FodyWeavers.xsd
 /.claude
 /.serena
 
+# SQL lite database
+*.db
+*.sqlite
