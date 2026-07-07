@@ -1,9 +1,7 @@
-﻿using SharpCompress.Common;
-using SharpCompress.Writers;
-using SharpCompress.Writers.Zip;
-using SharpCompress.Archives;
+﻿using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
-using SharpCompress.Compressors.Deflate;
+using SharpCompress.Common;
+using SharpCompress.Writers.Zip;
 
 namespace SaveMyGame.src
 {
@@ -11,18 +9,18 @@ namespace SaveMyGame.src
     {
         public static void CompressDirectory(string strInDirectoryPath, string strOutFilePath, bool bFastZip = false)
         {
-            CompressionLevel compressionLevel = bFastZip ? CompressionLevel.BestSpeed : CompressionLevel.BestCompression;
-            using Stream stream = File.OpenWrite(strOutFilePath);
-            using var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.LZMA) { DeflateCompressionLevel = compressionLevel, LeaveStreamOpen = false });
-            writer.WriteAll(strInDirectoryPath, "*", SearchOption.AllDirectories);
+            int compressionLevel = bFastZip ? 1 : 9;
+            using var archive = ZipArchive.CreateArchive();
+            archive.AddAllFromDirectory(strInDirectoryPath);
+            archive.SaveTo(strOutFilePath, new ZipWriterOptions(CompressionType.LZMA) { CompressionLevel = compressionLevel });
         }
         public static void CompressFile(string? strInFilePath, string? strOutFilePath)
         {
             if (string.IsNullOrWhiteSpace(strInFilePath) || !File.Exists(strInFilePath)) throw new FileNotFoundException($"File {strInFilePath} not found");
             if (string.IsNullOrWhiteSpace(strOutFilePath)) throw new ArgumentNullException(nameof(strOutFilePath));
-            using Stream stream = File.OpenWrite(strOutFilePath);
-            using var writer = new ZipWriter(stream, new ZipWriterOptions(CompressionType.LZMA) { LeaveStreamOpen = false });
-            writer.Write(Path.GetFileName(strInFilePath), strInFilePath);
+            using var archive = ZipArchive.CreateArchive();
+            archive.AddEntry(Path.GetFileName(strInFilePath), strInFilePath);
+            archive.SaveTo(strOutFilePath, new ZipWriterOptions(CompressionType.LZMA));
         }
         public static void DecompressFileToDestDirectory(string? strInFilePath, string? strOutDirectoryPath)
         {
@@ -31,7 +29,7 @@ namespace SaveMyGame.src
 
             string fullDestPath = Path.GetFullPath(strOutDirectoryPath);
 
-            using var archive = ZipArchive.Open(strInFilePath);
+            using var archive = ZipArchive.OpenArchive(strInFilePath);
             foreach (var entry in archive.Entries)
             {
                 if (entry.IsDirectory) continue;
