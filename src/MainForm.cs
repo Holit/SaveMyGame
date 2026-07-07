@@ -8,7 +8,7 @@ namespace SaveMyGame
 {
     public partial class MainForm : Form
     {
-        static ApplicationConfig runtimeConfig = new();
+        ApplicationConfig runtimeConfig = new();
 
         /// <summary>
         /// 从数据库恢复配置
