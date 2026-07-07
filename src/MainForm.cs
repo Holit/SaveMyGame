@@ -232,22 +232,24 @@ namespace SaveMyGame
             if (tmStatusBar != null)
             {
                 tmStatusBar.Stop();
+                tmStatusBar.Dispose();
             }
             LogToListbox(info);
             toolStripStatusLabel1.Text = info;
-            tmStatusBar = new System.Timers.Timer()
+            var timer = new System.Timers.Timer()
             {
                 //设置5s之后清空状态栏
                 Interval = 5000,
                 Enabled = false
             };
-            tmStatusBar.Elapsed += (state, e) =>
+            timer.Elapsed += (state, e) =>
             {
                 toolStripStatusLabel1.Text = "就绪";
-                tmStatusBar.Stop();
-                tmStatusBar.Dispose();
+                timer.Stop();
+                timer.Dispose();
             };
-            tmStatusBar.Start();
+            tmStatusBar = timer;
+            timer.Start();
 
         }
         delegate void DelegateSetMarqueeStyle();
