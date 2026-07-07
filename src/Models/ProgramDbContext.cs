@@ -1,9 +1,11 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore; 
 namespace SaveMyGame.src.Models
 {
     internal class ProgramDbContext : DbContext
     {
+        public static ProgramDbContext Create() => new();
+
         public DbSet<ApplicationConfig> ApplicationConfigs { get; set; }
         public DbSet<FileRecord> FileRecords { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

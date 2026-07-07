@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Diagnostics;
 using System.IO.Compression;
 using SaveMyGame.src;
@@ -9,20 +9,20 @@ namespace SaveMyGame
     public partial class MainForm : Form
     {
         static ApplicationConfig runtimeConfig = new();
-        static readonly ProgramDbContext db = new();
 
         /// <summary>
         /// 从数据库恢复配置
         /// </summary>
         void ReadConfig()
         {
+            using var db = ProgramDbContext.Create();
             runtimeConfig = db.ApplicationConfigs.FirstOrDefault();
             if (runtimeConfig == default(ApplicationConfig))
             {
                 runtimeConfig = new();
-                db.ApplicationConfigs.Add(runtimeConfig); 
+                db.ApplicationConfigs.Add(runtimeConfig);
+                db.SaveChanges();
             }
-            db.SaveChanges();
             tbFrom.Text = runtimeConfig.FromPath;
             tbSaveto.Text = runtimeConfig.ToPath;
             if (runtimeConfig.Interval <= 0) runtimeConfig.Interval = 60;
@@ -46,6 +46,8 @@ namespace SaveMyGame
             runtimeConfig.IsUsingLZMA = cbUsing7z.Checked;
             runtimeConfig.IsDeleteOldFiles = cbDeleteOldFiles.Checked;
             runtimeConfig.IsClearBeforeRestore = cbClearBeforeRestore.Checked;
+            using var db = ProgramDbContext.Create();
+            db.ApplicationConfigs.Update(runtimeConfig);
             db.SaveChanges();
         }
         /// <summary>
@@ -347,6 +349,7 @@ namespace SaveMyGame
             if (runtimeConfig.IsDeleteOldFiles)
             {
                 IEnumerable<string> filesInFolder = Directory.EnumerateFiles(runtimeConfig.ToPath);
+                using var db = ProgramDbContext.Create();
                 List<FileRecord> fileRecords = db.FileRecords.ToList();
 
                 // 筛选出文件夹中存在记录的文件
@@ -388,6 +391,7 @@ namespace SaveMyGame
                 }
             }
             //删除数据库
+            using var db = ProgramDbContext.Create();
             db.FileRecords.Remove(db.FileRecords.First(b => b.FilePath == filePath && b.Size == size));
             db.SaveChanges();
         }
@@ -398,6 +402,7 @@ namespace SaveMyGame
             DeleteOldFiles();
             //同步数据库和ListView
             UpdatelvDetail();
+            using var db = ProgramDbContext.Create();
             db.FileRecords.Add(new FileRecord(filePath, runtimeConfig.FromPath!, date, size));
             db.SaveChanges();
             //向ListView中添加详细记录
@@ -444,6 +449,7 @@ namespace SaveMyGame
         {
             VerifydbPath();
             lvDetails.Items.Clear();
+            using var db = ProgramDbContext.Create();
             List<FileRecord> fileRecords = db.FileRecords.ToList();
             foreach (var fileRecord in fileRecords)
             {
@@ -452,6 +458,7 @@ namespace SaveMyGame
         }
         public void VerifydbPath()
         {
+            using var db = ProgramDbContext.Create();
             List<FileRecord> fileRecords = db.FileRecords.ToList();
             foreach (var fileRecord in fileRecords)
             {
@@ -510,6 +517,7 @@ namespace SaveMyGame
                 }
 
                 string name = lvDetails.SelectedItems[0].SubItems[0].Text;
+                using var db = ProgramDbContext.Create();
                 FileRecord zipToRestore = db.FileRecords.First(b => b.FilePath.Contains(name));
 
 
