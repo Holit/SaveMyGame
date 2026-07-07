@@ -12,7 +12,7 @@ namespace SaveMyGame.src.Models
         {
             optionsBuilder.UseSqlite(new SqliteConnectionStringBuilder()
             {
-                DataSource = Path.Combine(Environment.CurrentDirectory, "data")
+                DataSource = Path.Combine(Environment.CurrentDirectory, "savemygame.db")
             }.ToString());
             base.OnConfiguring(optionsBuilder);
         }
