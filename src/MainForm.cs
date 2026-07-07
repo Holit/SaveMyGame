@@ -392,8 +392,12 @@ namespace SaveMyGame
             }
             //删除数据库
             using var db = ProgramDbContext.Create();
-            db.FileRecords.Remove(db.FileRecords.First(b => b.FilePath == filePath && b.Size == size));
-            db.SaveChanges();
+            var record = db.FileRecords.FirstOrDefault(b => b.FilePath == filePath && b.Size == size);
+            if (record != null)
+            {
+                db.FileRecords.Remove(record);
+                db.SaveChanges();
+            }
         }
         delegate void DelegateInsertRecord(string filePath, DateTime date, long size);
         public void InsertRecord(string filePath, DateTime date, long size)
