@@ -56,6 +56,8 @@ namespace SaveMyGame
         /// <returns></returns>
         void MoveFiles(string sourcePath, string destPath) //文件移动函数
         {
+            if (string.IsNullOrEmpty(runtimeConfig.ToPath) || !IsPathWithinDirectory(sourcePath, runtimeConfig.ToPath))
+                throw new InvalidOperationException($"Source path '{sourcePath}' is outside allowed directory.");
             DirectoryInfo dir = new DirectoryInfo(sourcePath);
             if (Directory.Exists(sourcePath))
             {
@@ -82,6 +84,16 @@ namespace SaveMyGame
             Directory.Delete(sourcePath);
         }
 
+        /// <summary>
+        /// Validates that a resolved path stays within an allowed base directory (prevents path traversal).
+        /// </summary>
+        private static bool IsPathWithinDirectory(string path, string baseDirectory)
+        {
+            string fullPath = Path.GetFullPath(path);
+            string fullBase = Path.GetFullPath(baseDirectory);
+            return fullPath.StartsWith(fullBase + Path.DirectorySeparatorChar)
+                || fullPath == fullBase;
+        }
 
         /// <summary>
         /// 获取某一文件夹的大小
@@ -360,6 +372,11 @@ namespace SaveMyGame
         /// <param name="size"></param>
         public void DeleteRecord(string filePath, long size)
         {
+            if (string.IsNullOrEmpty(runtimeConfig.ToPath) || !IsPathWithinDirectory(filePath, runtimeConfig.ToPath))
+            {
+                LogToListbox($"拒绝删除: 文件路径超出存档目录范围", true);
+                return;
+            }
             //删除文件
             if (File.Exists(filePath))
             {
@@ -505,7 +522,7 @@ namespace SaveMyGame
                         if (Directory.Exists(runtimeConfig.FromPath))
                         {
                             Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
-                                                        runtimeConfig.FromPath + "\\",
+                                                        runtimeConfig.FromPath,
                                                         Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
                                                         Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
 
@@ -621,8 +638,6 @@ namespace SaveMyGame
             // Get the total size of the directory
             long totalSize = CalculateDirectorySize(files);
 
-            string basePath = sourceDirectory + "\\";
-
             long processedFileSize = 0;
 
             using (ZipArchive zip = ZipFile.Open(zipFilePath, ZipArchiveMode.Create))
@@ -631,7 +646,7 @@ namespace SaveMyGame
                 {
                     try
                     {
-                        string relativePath = file.Replace(basePath, "");
+                        string relativePath = Path.GetRelativePath(sourceDirectory, file);
                         zip.CreateEntryFromFile(file, relativePath);
 
                         processedFileSize += new FileInfo(file).Length;
@@ -680,7 +695,7 @@ namespace SaveMyGame
             DateTime dt = DateTime.Now;
             string filename = dt.ToString("yyMMddhhmmssffffff") + ".zip";
 
-            string savepath = runtimeConfig.ToPath + "\\" + filename;
+            string savepath = Path.Combine(runtimeConfig.ToPath, filename);
 
             // 禁用手动保存按钮
             btnManSave.Enabled = false;
@@ -825,7 +840,7 @@ namespace SaveMyGame
                 DateTime dt = DateTime.Now;
                 string filename = dt.ToString("yyMMddhhmmssffffff") + ".zip";
 
-                string savepath = runtimeConfig.ToPath + "\\" + filename;
+                string savepath = Path.Combine(runtimeConfig.ToPath, filename);
 
                 //本应该检测文件是否存在，但是由于使用时间戳的6位毫秒形式保存文件，则不太可能存在一样的文件。
 
@@ -872,7 +887,7 @@ namespace SaveMyGame
                 DateTime dt = DateTime.Now;
                 string filename = dt.ToString("yyMMddhhmmssffffff") + ".zip";
 
-                string savepath = runtimeConfig.ToPath + "\\" + filename;
+                string savepath = Path.Combine(runtimeConfig.ToPath, filename);
 
                 string? sourceDirectory = runtimeConfig.FromPath;
                 string zipFilePath = savepath;

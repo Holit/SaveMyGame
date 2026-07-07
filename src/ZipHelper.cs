@@ -28,8 +28,28 @@ namespace SaveMyGame.src
         {
             if (string.IsNullOrWhiteSpace(strInFilePath) || !File.Exists(strInFilePath)) throw new FileNotFoundException($"File {strInFilePath} not found");
             if (string.IsNullOrWhiteSpace(strOutDirectoryPath)) throw new ArgumentNullException(nameof(strOutDirectoryPath));
+
+            string fullDestPath = Path.GetFullPath(strOutDirectoryPath);
+
             using var archive = ZipArchive.Open(strInFilePath);
-            foreach (var entry in archive.Entries) if (!entry.IsDirectory) entry.WriteToDirectory(strOutDirectoryPath, new ExtractionOptions() { Overwrite = true });
+            foreach (var entry in archive.Entries)
+            {
+                if (entry.IsDirectory) continue;
+
+                string entryKey = entry.Key;
+                if (string.IsNullOrWhiteSpace(entryKey)) continue;
+
+                string fullTargetPath = Path.GetFullPath(Path.Combine(fullDestPath, entryKey));
+                if (!fullTargetPath.StartsWith(fullDestPath + Path.DirectorySeparatorChar))
+                    throw new InvalidOperationException($"Zip entry '{entryKey}' attempts to extract outside of target directory.");
+
+                string? targetDir = Path.GetDirectoryName(fullTargetPath);
+                if (targetDir != null) Directory.CreateDirectory(targetDir);
+
+                using var entryStream = entry.OpenEntryStream();
+                using var fileStream = File.Create(fullTargetPath);
+                entryStream.CopyTo(fileStream);
+            }
         }
     }
 }
